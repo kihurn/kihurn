@@ -1,7 +1,3 @@
-<!-- Dynamic Header -->
-<h1 align="center">
-  <img src="https://readme-typing-svg.herokuapp.com/?font=Inter&size=36&center=true&vCenter=true&width=700&height=70&color=4493F8&duration=4000&lines=Hi,+I'm+Ki+Hurn.;Computer+Science+at+Taylor's+University." alt="Header" />
-</h1>
 
 <!-- Git Profile Koi -->
 <div align="center">
