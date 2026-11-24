@@ -66,3 +66,10 @@ export function getEcosystemGraph(ps: Project[]): { nodes: GraphNode[]; edges: G
   edges.push({ from: SITE_CHAT.slug, to: "c0re" });
   return { nodes, edges };
 }
+
+/** Repos whose public activity may appear on Home. The profile repo is never listed. */
+export function getActivityRepos(ps: Project[]): string[] {
+  return ps
+    .filter((p) => (p.showOnHome || p.ecosystem) && p.repo && p.repo !== "kihurn/kihurn")
+    .map((p) => p.repo as string);
+}
