@@ -25,3 +25,17 @@ Every gap rendered on the site as `TODO:` is listed here.
   - Fixed on the way: swipe hint was client-only (Home LCP 3.2 s -> 0.9 s); HUD label contrast raised; Geist fonts preloaded.
 - 768 px and 1920 px: no horizontal overflow on `/`, `/lab`, `/about`, `/gigs`, `/contact`, `/lab/elysium`; no console errors.
 - Carter grep: clean.
+
+## Handoff state (2026-11-25)
+Done and pushed to `kihurn/kihurn` `main`: Phases 0-2, Phase 3 Task 3.1, Phase 4 code (chat, health, rate limits, mock, tunnel guide), Phase 5 code (ticket form, SecureFin face demo).
+Needs Ki Hurn (not doable by an agent without his accounts):
+- Task 3.2: import `Interactive-Book` on Vercel as `kihurn-book`; disable (not delete) its koi workflow.
+- Task 4.4: mint a `website` C0RE key, set up Tailscale Funnel per `docs/tunnel-setup.md`, add env vars in Vercel (`C0RE_URL`, `C0RE_API_KEY`, `C0RE_MODEL`, Upstash pair, `RESEND_API_KEY`), redeploy, then run the preview checks listed in the guide.
+- Task 5.1 step 6: Resend account for the site email, then send one real test ticket.
+- Confirm C0RE's real health route; `C0RE_HEALTH_PATH` defaults to `/api/tags` (unverified).
+Open engineering items:
+- Lab (LCP ~3.2 s) and About (~2.8 s) miss the 2.5 s LCP target on throttled mobile. About's stamp photo uses a heavy SVG print filter; Lab's list is positioned by JS. Server-render their first frame or lighten the filter.
+- The ticket stub is an original design, not a port of the clone's letter and receipt.
+- Halftone cursor effect only on the Gigs crew pass; paper background is CSS grain only (no WebGL).
+- Face demo: fallback video `src` is `TODO:`; pretrained face-api.js models live in `public/models/` (6.5 MB, loaded only after "Start camera").
+- Phase 6 (restyle) has not started: Ki Hurn directs it.

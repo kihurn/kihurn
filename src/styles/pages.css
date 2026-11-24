@@ -88,3 +88,11 @@
 .stub__rows dt{opacity:.6}
 .stub__rows dd{margin:0;text-align:end;overflow-wrap:anywhere}
 .stub__foot{margin:0;opacity:.6}
+
+/* securefin: on-device face demo */
+.face{display:flex;flex-direction:column;gap:var(--s-14);align-items:flex-start;padding:var(--s-20);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
+.face__note{margin:0;opacity:.75}
+.face__video,.face__fallback video{inline-size:min(100%,30rem);border-radius:var(--r-lg,.75rem);background:#000;aspect-ratio:4/3;transform:scaleX(-1)}
+.face__fallback video{transform:none}
+.face__fallback{margin:0;display:flex;flex-direction:column;gap:var(--s-6)}
+.face__live{display:flex;flex-direction:column;gap:var(--s-8);align-items:flex-start}

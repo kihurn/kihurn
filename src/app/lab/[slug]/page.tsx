@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import "../../../styles/lab.css";
+import { FaceDemo } from "@/components/lab/FaceDemo";
 import { Flow, ProjectLinks } from "@/components/lab/Parts";
 import { caseStudies } from "@/content/caseStudies";
 import { projects } from "@/content/projects";
@@ -70,6 +71,7 @@ export default async function CaseStudyPage({ params }: Params) {
         {cs.how.map((para) => (
           <p key={para} className="text-body">{para}</p>
         ))}
+        {p.slug === "securefin" ? <FaceDemo /> : null}
       </section>
 
       <section className="lab-sec" aria-labelledby="cs-result">
