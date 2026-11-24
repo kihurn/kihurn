@@ -1,0 +1,63 @@
+/* About and Gigs. Shares tokens with the rest of the site. */
+
+.page{padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;display:flex;flex-direction:column;gap:var(--s-64)}
+.page__head{display:flex;flex-direction:column;gap:var(--s-14)}
+.page__head h1{margin:0}
+.page__intro{max-inline-size:40rem;margin:0;opacity:.85}
+.page__sec{display:flex;flex-direction:column;gap:var(--s-20)}
+.page__title{margin:0;opacity:.7}
+
+/* about: intro beside the headshot */
+.about__head{display:grid;gap:var(--s-32);grid-template-columns:1fr}
+.about__copy{display:flex;flex-direction:column;gap:var(--s-14)}
+.about__photo{inline-size:min(100%,16rem);border-radius:var(--r-xl,1rem);overflow:hidden;border:1px solid var(--line)}
+@media (width>=48rem){.about__head{grid-template-columns:1fr 16rem;align-items:end}}
+
+/* timeline */
+.timeline{list-style:none;margin:0;padding:0;border-block-start:1px solid var(--line)}
+.timeline__row{display:grid;grid-template-columns:11rem 1fr;gap:var(--s-24);padding:var(--s-18) 0;border-block-end:1px solid var(--line)}
+.timeline__when{opacity:.7}
+.timeline__main{display:flex;flex-direction:column;gap:var(--s-4)}
+.timeline__kind{opacity:.6;margin:0}
+.timeline__title{margin:0;font-size:var(--fs-500,1.25rem);line-height:1.2;font-weight:500}
+.timeline__org,.timeline__detail{margin:0;opacity:.85;max-inline-size:44rem}
+@media (width<=47.99rem){.timeline__row{grid-template-columns:1fr;gap:var(--s-6)}}
+
+/* skills */
+.skills{display:grid;gap:var(--s-24);grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))}
+.skills__group{display:flex;flex-direction:column;gap:var(--s-10)}
+.skills__h{margin:0;font-size:var(--fs-400,1.125rem);font-weight:500}
+.skills__list{display:flex;flex-wrap:wrap;gap:var(--s-6);list-style:none;margin:0;padding:0}
+.about__spoken{margin:0}
+.about__last{margin:0;padding-block-start:var(--s-24);border-block-start:1px solid var(--line);font-size:var(--fs-500,1.5rem)}
+.about__crew{color:inherit;text-decoration:none}
+.about__crew:hover,.about__crew:focus-visible{text-decoration:underline}
+
+/* gigs: the crew pass */
+.gigs__pass{display:grid;place-items:center;padding-block:var(--s-16)}
+.pass{appearance:none;border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer;perspective:1200px;inline-size:min(100%,19rem);aspect-ratio:3/4.4;text-align:start}
+.pass:focus-visible{outline:2px solid var(--ink);outline-offset:6px;border-radius:var(--r-xl,1rem)}
+.pass__inner{position:relative;display:block;inline-size:100%;block-size:100%;transform-style:preserve-3d;transition:transform .4s var(--ease-out-expo)}
+.pass[data-flipped="true"] .pass__inner{transform:rotateY(180deg)}
+.pass__face{position:absolute;inset:0;display:flex;flex-direction:column;gap:var(--s-12);padding:var(--s-20);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 6%,var(--paper));backface-visibility:hidden;-webkit-backface-visibility:hidden;transition:visibility 0s linear .2s}
+.pass__back{transform:rotateY(180deg)}
+.pass[data-flipped="false"] .pass__back{visibility:hidden}
+.pass[data-flipped="true"] .pass__front{visibility:hidden}
+.pass__hole{align-self:center;inline-size:3.5rem;block-size:.75rem;border-radius:99px;border:1px solid var(--line);background:var(--paper)}
+.pass__photo{inline-size:100%;border-radius:var(--r-lg,.75rem);overflow:hidden;border:1px solid var(--line)}
+.pass__name{font-size:clamp(1.5rem,4vw,2rem);line-height:1.05}
+.pass__kind,.pass__k{opacity:.75}
+.pass__roles{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s-8);flex:1}
+.pass__roles li{padding-block:var(--s-6);border-block-end:1px solid var(--line)}
+.pass__hint{opacity:.55}
+
+/* gigs: events */
+.events{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-24);grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
+.event{display:flex;flex-direction:column;gap:var(--s-8);padding:var(--s-16);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
+.event__photo{inline-size:100%;block-size:auto;border-radius:var(--r-lg,.75rem)}
+.event__name{margin:var(--s-8) 0 0;font-size:var(--fs-600,1.5rem);line-height:1.1}
+.event__role,.event__detail{margin:0;opacity:.85}
+
+@media (prefers-reduced-motion:reduce){
+  .pass__inner,.pass__face{transition:none!important;animation:none!important}
+}
