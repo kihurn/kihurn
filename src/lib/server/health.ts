@@ -1,6 +1,6 @@
 import "server-only";
 
-const TTL_MS = 30_000;
+const TTL_MS = Number(process.env.C0RE_HEALTH_TTL_MS ?? 30_000); // e2e sets 0
 let cache: { at: number; online: boolean } | null = null;
 
 export function resetHealthCache() {

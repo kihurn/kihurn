@@ -10,7 +10,8 @@ interface Props {
   building: string | null;
 }
 
-export function StatusBar({ chatOnline, building }: Props) {
+export function StatusBar({ chatOnline: initial, building }: Props) {
+  const [chatOnline, setChatOnline] = useState<boolean | null>(initial);
   // render a stable placeholder on the server, then tick on the client
   const [time, setTime] = useState("KL --:--");
   useEffect(() => {
@@ -18,6 +19,25 @@ export function StatusBar({ chatOnline, building }: Props) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      try {
+        const r = await fetch("/api/chat/health");
+        const j = (await r.json()) as { online?: boolean };
+        if (alive) setChatOnline(Boolean(j.online));
+      } catch {
+        if (alive) setChatOnline(false);
+      }
+    };
+    poll();
+    const id = setInterval(poll, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
   }, []);
 
   const chat = chatOnline === null ? "…" : chatOnline ? "ONLINE" : "NAPPING";

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useId, useRef, useState } from "react";
 import type { FaqEntry } from "@/content/types";
 import { faq } from "@/content/faq";
-import { matchFaq } from "@/lib/faq";
 
 interface Msg {
   from: "you" | "me";
@@ -13,25 +12,56 @@ interface Msg {
   ticket?: boolean;
 }
 
-const NO_MATCH = "The full chat is coming soon. Try a suggested question, or send me a ticket.";
+const ERR = "Something went wrong. Try a suggested question, or send me a ticket.";
 
-/** Phase 2: answers come only from the scripted FAQ. Phase 4 adds the live model behind the same box. */
+/** Chips answer instantly from the script (works offline); typed questions go to /api/chat. */
 export function ChatBox({ chips }: { chips: FaqEntry[] }) {
   const [log, setLog] = useState<Msg[]>([]);
   const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
 
-  function ask(text: string, exact?: FaqEntry) {
+  function chip(entry: FaqEntry) {
+    setLog((l) => [...l, { from: "you", text: entry.question }, { from: "me", text: entry.answer, tag: "faq" }]);
+  }
+
+  async function ask(text: string) {
     const q = text.trim();
-    if (!q) return;
-    const hit = exact ?? matchFaq(q, faq);
-    setLog((l) => [
-      ...l,
-      { from: "you", text: q },
-      hit ? { from: "me", text: hit.answer, tag: "faq" } : { from: "me", text: NO_MATCH, ticket: true },
-    ]);
+    if (!q || busy) return;
+    const exact = faq.find((e) => e.question.toLowerCase() === q.toLowerCase());
+    if (exact) {
+      chip(exact);
+      setValue("");
+      return;
+    }
+    const history = log
+      .filter((m) => !m.ticket)
+      .slice(-6)
+      .map((m) => ({ role: m.from === "you" ? "user" : "assistant", content: m.text.slice(0, 500) }));
+    setLog((l) => [...l, { from: "you", text: q }]);
     setValue("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: q, history }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { reply?: string; error?: string; offline?: boolean; source?: string; ms?: number };
+      if (res.ok && j.reply) {
+        const tag = j.source === "c0re" && typeof j.ms === "number" ? `c0re · ${(j.ms / 1000).toFixed(1)}s` : (j.source ?? "faq");
+        setLog((l) => [...l, { from: "me", text: j.reply!, tag }]);
+      } else if (j.offline && j.reply) {
+        setLog((l) => [...l, { from: "me", text: j.reply!, tag: "offline", ticket: true }]);
+      } else {
+        setLog((l) => [...l, { from: "me", text: j.error ?? ERR, ticket: res.status !== 429 }]);
+      }
+    } catch {
+      setLog((l) => [...l, { from: "me", text: ERR, ticket: true }]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -57,7 +87,10 @@ export function ChatBox({ chips }: { chips: FaqEntry[] }) {
           autoComplete="off"
           onChange={(e) => setValue(e.target.value)}
         />
-        <button className="chat__send" type="submit" aria-label="Send">
+        <span className="chat__count text-meta" aria-hidden="true">
+          {value.length}/500
+        </span>
+        <button className="chat__send" type="submit" aria-label="Send" disabled={busy}>
           ↵
         </button>
       </form>
@@ -65,14 +98,14 @@ export function ChatBox({ chips }: { chips: FaqEntry[] }) {
       <ul className="chat__chips" aria-label="Suggested questions">
         {chips.map((c) => (
           <li key={c.id}>
-            <button className="chip text-meta chat__chip" type="button" data-chip onClick={() => ask(c.question, c)}>
+            <button className="chip text-meta chat__chip" type="button" data-chip onClick={() => chip(c)}>
               {c.question}
             </button>
           </li>
         ))}
       </ul>
 
-      <div className="chat__log" data-chat-log aria-live="polite">
+      <div className="chat__log" data-chat-log aria-live="polite" aria-busy={busy}>
         {log.map((m, i) => (
           <p key={i} className={`chat__msg chat__msg--${m.from}`}>
             <span className="chat__who text-meta">{m.from === "you" ? "You" : "Ki Hurn's site"}</span>
@@ -86,6 +119,12 @@ export function ChatBox({ chips }: { chips: FaqEntry[] }) {
             ) : null}
           </p>
         ))}
+        {busy ? (
+          <p className="chat__msg chat__msg--me" data-chat-typing>
+            <span className="chat__who text-meta">Ki Hurn&apos;s site</span>
+            <span className="chat__typing">…</span>
+          </p>
+        ) : null}
       </div>
     </div>
   );

@@ -2,13 +2,16 @@
 import { createServer } from "node:http";
 
 const PORT = Number(process.env.MOCK_PORT ?? 7081);
-const down = process.env.MOCK_DOWN === "1";
+let down = process.env.MOCK_DOWN === "1";
 
 createServer((req, res) => {
   const send = (code: number, body: unknown) => {
     res.writeHead(code, { "Content-Type": "application/json" });
     res.end(JSON.stringify(body));
   };
+  // test control: flip the mock up or down at runtime
+  if (req.url === "/__down") { down = true; return send(200, { down }); }
+  if (req.url === "/__up") { down = false; return send(200, { down }); }
   if (down) return send(503, { error: "down" });
   if (req.url === "/api/tags" && req.method === "GET") return send(200, { models: [] });
   if (req.url === "/api/chat" && req.method === "POST") {

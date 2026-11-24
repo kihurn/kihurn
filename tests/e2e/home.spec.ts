@@ -22,15 +22,6 @@ test("clicking the availability chip shows that FAQ answer", async ({ page }) =>
   await expect(page.locator("[data-chat-log]")).toContainText(entry.answer.slice(0, 40));
 });
 
-test("typed text that matches nothing gets the coming-soon reply", async ({ page }) => {
-  await page.goto("/");
-  await hydrated(page);
-  const input = page.getByLabel("Ask me anything about Ki Hurn");
-  await input.fill("asdf qwerty");
-  await input.press("Enter");
-  await expect(page.locator("[data-chat-log]")).toContainText("The full chat is coming soon");
-});
-
 test("the Now list has four rows", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("[data-now] li")).toHaveCount(4);

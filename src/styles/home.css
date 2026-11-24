@@ -17,6 +17,10 @@
 .chat__input{flex:1;min-inline-size:0;border:0;background:transparent;color:var(--ink);font:inherit;padding-block:var(--s-10);outline:none}
 .chat__input::placeholder{color:var(--ink);opacity:.5}
 .chat__send{appearance:none;border:0;border-radius:var(--r-md,.5rem);background:var(--ink);color:var(--paper);font:inherit;padding:var(--s-8) var(--s-14);cursor:pointer;min-block-size:2.5rem}
+.chat__count{opacity:.55;font-variant-numeric:tabular-nums}
+.chat__typing{display:inline-block;animation:chat-pulse 1s ease-in-out infinite}
+@keyframes chat-pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.chat__typing{animation:none}}
 .chat__chips{display:flex;flex-wrap:wrap;gap:var(--s-8);list-style:none;margin:0;padding:0}
 .chat__chip{appearance:none;cursor:pointer;color:inherit;border:1px solid var(--line);text-align:start}
 .chat__chip:hover,.chat__chip:focus-visible{background:color-mix(in srgb,var(--ink) 12%,var(--paper))}
