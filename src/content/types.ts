@@ -17,7 +17,7 @@ export interface Project {
   showOnHome: boolean;
   featured: boolean;
   caseStudy: boolean;
-  finishedOn?: string; // "YYYY-MM" or "TODO"
+  finishedOn?: string; // "YYYY-MM"; the string for unknown dates is set in content
   tags?: string[]; // e.g. "SHIPPED", "DEMO", "INTERNAL", "WIP"
 }
 
