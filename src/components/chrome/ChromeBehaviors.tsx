@@ -298,16 +298,19 @@ export function ChromeBehaviors() {
         pill.style.opacity = "0";
         return;
       }
-      const lr = list.getBoundingClientRect();
+      // the pill is positioned inside its offsetParent (the padded nav), so measure against that
+      const host = (pill.offsetParent as HTMLElement | null) ?? list;
+      const hr = host.getBoundingClientRect();
       const r = a.getBoundingClientRect();
       pill.style.width = `${r.width}px`;
       pill.style.height = `${r.height}px`;
-      pill.style.transform = `translate(${r.left - lr.left}px, ${r.top - lr.top}px)`;
+      pill.style.transform = `translate(${r.left - hr.left - host.clientLeft}px, ${r.top - hr.top - host.clientTop}px)`;
       pill.style.opacity = "1";
     };
     const current = links.find((a) => a.getAttribute("href") === pathname) ?? null;
     links.forEach((a) => a.toggleAttribute("aria-current", a === current));
     place(current);
+    document.fonts?.ready.then(() => place(current));
     const leave = () => place(current);
     const hs = links.map((a) => [a, () => place(a)] as const);
     hs.forEach(([a, h]) => a.addEventListener("mouseenter", h));

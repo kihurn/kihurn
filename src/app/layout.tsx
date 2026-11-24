@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import "./globals.css";
 import "../styles/site.css";
 import "../styles/chrome.css";
 import { site } from "@/content/site";

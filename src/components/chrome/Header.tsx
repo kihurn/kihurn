@@ -26,9 +26,8 @@ export function Header({ chatOnline, building }: Props) {
             <ul className="navpill__list">
               {NAV.map((n) => (
                 <li key={n.href}>
-                  <Link className="navpill__link text-nav" href={n.href}>
+                  <Link className="navpill__link text-nav" href={n.href} aria-label={n.label}>
                     <span className="roll" data-roll aria-hidden="true">{n.label}</span>
-                    <span className="u-sr-only">{n.label}</span>
                   </Link>
                 </li>
               ))}

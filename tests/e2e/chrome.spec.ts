@@ -77,3 +77,23 @@ test("first Tab lands on the skip link", async ({ page }) => {
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
 });
+
+test("nav pill sits exactly on the current page's link", async ({ page, isMobile }) => {
+  test.skip(isMobile, "the pill nav is desktop only");
+  for (const [path, label] of [["/about", "About"], ["/lab", "Lab"], ["/", "Home"]] as const) {
+    await page.goto(path);
+    await page.evaluate(() => document.fonts.ready);
+    const link = page.locator(".navpill__link", { hasText: label });
+    // wait out the 0.4s slide
+    await expect
+      .poll(async () => {
+        const [p, l] = await Promise.all([
+          page.locator("[data-nav-pill]").boundingBox(),
+          link.boundingBox(),
+        ]);
+        if (!p || !l) return 99;
+        return Math.max(Math.abs(p.x - l.x), Math.abs(p.y - l.y), Math.abs(p.width - l.width), Math.abs(p.height - l.height));
+      })
+      .toBeLessThanOrEqual(1);
+  }
+});
