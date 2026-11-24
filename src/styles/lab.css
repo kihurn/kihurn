@@ -1,0 +1,78 @@
+/* Lab: ecosystem map, lens filter, entries, case studies */
+
+.lab{padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;display:flex;flex-direction:column;gap:var(--s-64)}
+.lab__head{display:flex;flex-direction:column;gap:var(--s-14)}
+.lab__head h1{margin:0}
+.lab__intro{max-inline-size:40rem;margin:0;opacity:.8}
+.lab-sec{display:flex;flex-direction:column;gap:var(--s-16)}
+.lab-sec__title{margin:0;opacity:.7}
+.lab-sec__note{margin:0;opacity:.7;max-inline-size:40rem}
+
+/* ecosystem map: three columns on desktop, a stack on phones */
+.eco{position:relative;min-block-size:22rem;border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper));color:var(--ink)}
+.eco__edges{position:absolute;inset:0;inline-size:100%;block-size:100%;opacity:.55;pointer-events:none}
+.eco__node{position:absolute;inset-inline-start:var(--x);inset-block-start:var(--y);transform:translate(-50%,-50%);inline-size:clamp(9rem,22%,13rem);display:flex;flex-direction:column;gap:var(--s-4);align-items:flex-start;text-align:start;padding:var(--s-12) var(--s-14);border:1px solid var(--ink);border-radius:var(--r-lg,.75rem);background:var(--paper);color:var(--ink);font:inherit;cursor:pointer;transition:background .2s var(--ease-out-quad),transform .2s var(--ease-out-quad)}
+.eco__node:hover,.eco__node:focus-visible{background:color-mix(in srgb,var(--ink) 12%,var(--paper))}
+.eco__node--idle{border-style:dashed;border-color:var(--line);opacity:.55;cursor:default}
+.eco__node--idle:hover,.eco__node--idle:focus-visible{background:var(--paper)}
+.eco__name{font-size:var(--fs-400,1.125rem);line-height:1.15}
+.eco__state,.eco__uses{opacity:.65}
+.eco__uses{display:none}
+
+@media (width<=47.99rem){
+  .eco{min-block-size:0;display:flex;flex-direction:column;gap:var(--s-12);padding:var(--s-16)}
+  .eco__edges{display:none}
+  .eco__node{position:static;transform:none;inline-size:100%}
+  .eco__uses{display:block}
+}
+
+/* the chat path, and case-study diagrams */
+.flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s-8)}
+.flow__step{position:relative;display:flex;gap:var(--s-14);align-items:baseline;padding:var(--s-12) var(--s-16);border:1px solid var(--line);border-radius:var(--r-lg,.75rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
+.flow__step:not(:last-child)::after{content:"↓";position:absolute;inset-inline-start:var(--s-16);inset-block-end:calc(-1 * var(--s-14));font-size:.9rem;opacity:.6;background:var(--paper);line-height:1}
+.flow__n{opacity:.6}
+@media (width>=48rem){
+  .flow{flex-direction:row;flex-wrap:wrap}
+  .flow__step{flex:1 1 12rem;flex-direction:column;gap:var(--s-6)}
+  .flow__step:not(:last-child)::after{content:"→";inset-inline-start:auto;inset-inline-end:calc(-1 * var(--s-10));inset-block-end:auto;inset-block-start:50%;transform:translateY(-50%)}
+}
+
+/* lens filter */
+.labb{display:flex;flex-direction:column;gap:var(--s-48)}
+.lens{display:flex;flex-wrap:wrap;gap:var(--s-8)}
+.lens__btn{appearance:none;cursor:pointer;color:inherit;border:1px solid var(--line);min-block-size:2.25rem}
+.lens__btn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* entries */
+.entries{display:flex;flex-direction:column;gap:var(--s-24)}
+.pentry{scroll-margin-block-start:7rem;display:flex;flex-direction:column;gap:var(--s-16);padding:var(--s-24);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
+.pentry__head{display:flex;flex-direction:column;gap:var(--s-10)}
+.pentry__name{margin:0;font-size:clamp(1.75rem,4vw,2.5rem)}
+.pentry__tags,.pentry__stack{display:flex;flex-wrap:wrap;gap:var(--s-6);list-style:none;margin:0;padding:0}
+.pentry__summary{margin:0;max-inline-size:46rem}
+.pentry__parts{display:grid;gap:var(--s-14);margin:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
+.pentry__parts dt{opacity:.65;margin-block-end:var(--s-4)}
+.pentry__parts dd{margin:0}
+.plinks{display:flex;flex-wrap:wrap;gap:var(--s-8) var(--s-24);list-style:none;margin:0;padding:0}
+.plinks a{color:inherit}
+
+/* placeholder where a screenshot or diagram will go */
+.shot{display:grid;place-items:center;margin:0;aspect-ratio:16/7;border:1px dashed var(--line);border-radius:var(--r-lg,.75rem);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ink) 6%,var(--paper)) 0 12px,color-mix(in srgb,var(--ink) 11%,var(--paper)) 12px 24px)}
+.shot--blur{filter:blur(.4px)}
+.shot--blur .shot__t{backdrop-filter:blur(6px);padding:var(--s-4) var(--s-8);border-radius:var(--r-sm,.25rem)}
+.shot__t{opacity:.75}
+
+/* 3D book card */
+.book{display:flex;flex-direction:column;gap:var(--s-8);padding:var(--s-24);border:1px solid var(--line);border-radius:var(--r-xl,1rem);color:inherit;text-decoration:none;background:color-mix(in srgb,var(--ink) 4%,var(--paper));max-inline-size:34rem}
+.book:hover,.book:focus-visible{background:color-mix(in srgb,var(--ink) 10%,var(--paper))}
+.book__t{font-size:clamp(1.75rem,4vw,2.5rem)}
+.book__k,.book__d{opacity:.7}
+
+/* case study pages */
+.case__back{color:inherit;text-decoration:none;opacity:.7;align-self:flex-start}
+.case__back:hover,.case__back:focus-visible{opacity:1;text-decoration:underline}
+.case .lab-sec p{max-inline-size:46rem;margin:0}
+
+@media (prefers-reduced-motion:reduce){
+  .eco__node{transition:none}
+}
