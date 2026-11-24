@@ -59,6 +59,7 @@ export function ChromeBehaviors() {
     const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
     const $$ = <T extends HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)];
     const cleanups: Array<() => void> = [];
+    root.dataset.hydrated = "true"; // lets tests (and anything else) know client code is live
     const on = (
       t: Document | HTMLElement | Window,
       type: string,
