@@ -1,6 +1,9 @@
 /* Home: status page. Uses the reference's tokens (--ink, --paper, --line, --s-*, --margin). */
 
-.home{padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;display:flex;flex-direction:column;gap:var(--s-80)}
+.home{display:flex;flex-direction:column}
+.home__rest{padding:var(--s-80) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;inline-size:100%;display:flex;flex-direction:column;gap:var(--s-80)}
+/* touch: sideways swipes turn the wheel, vertical swipes still scroll the page */
+.hv2__stage{touch-action:pan-y pinch-zoom}
 
 /* hero */
 .hero{display:flex;flex-direction:column;gap:var(--s-16)}
@@ -43,24 +46,6 @@
 .pcard__name a:hover,.pcard__name a:focus-visible{text-decoration:underline}
 .pcard__summary{margin:0;opacity:.8;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 
-/* featured carousel */
-.fc{display:flex;flex-direction:column;gap:var(--s-20);outline-offset:6px}
-.fc__head{display:flex;align-items:center;justify-content:space-between}
-.fc__counter{margin:0}
-.fc__nav{display:flex;gap:var(--s-8)}
-.fc__btn{appearance:none;inline-size:2.5rem;block-size:2.5rem;border:1px solid var(--line);border-radius:var(--r-md,.5rem);background:transparent;color:var(--ink);font:inherit;cursor:pointer}
-.fc__btn:disabled{opacity:.35;cursor:default}
-.fc__btn:not(:disabled):hover,.fc__btn:focus-visible{background:color-mix(in srgb,var(--ink) 12%,var(--paper))}
-.fc__track{list-style:none;margin:0;padding:0;display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x pan-y}
-.fc__track::-webkit-scrollbar{display:none}
-.fc__slide{flex:0 0 100%;scroll-snap-align:center;display:grid;place-items:center}
-.fc__shot{inline-size:min(100%,34rem);border-radius:var(--r-xl,1rem);overflow:hidden;border:1px solid var(--line)}
-.fc__body{display:flex;flex-direction:column;gap:var(--s-12);align-items:flex-start;max-inline-size:40rem}
-.fc__title{margin:0}
-.fc__tags{display:flex;flex-wrap:wrap;gap:var(--s-6);list-style:none;margin:0;padding:0}
-.fc__summary{margin:0;opacity:.8}
-.fc__link{color:inherit}
-
 /* halftone image: the canvas lays a dot-screen over the pointer's wake */
 .halftone{position:relative;display:block;line-height:0}
 .halftone__img{inline-size:100%;block-size:100%;object-fit:cover;display:block;user-select:none}
@@ -79,6 +64,6 @@
 .cta__link{color:inherit;text-decoration:none;font-size:var(--fs-500,1.5rem)}
 .cta__link:hover,.cta__link:focus-visible{text-decoration:underline}
 
-@media (prefers-reduced-motion:reduce){
-  .fc__track{scroll-behavior:auto}
-}
+
+/* wheel over the stage must still reach the page */
+.hv2__stage{overscroll-behavior:auto}

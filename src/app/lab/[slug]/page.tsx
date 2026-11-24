@@ -27,11 +27,11 @@ export default async function CaseStudyPage({ params }: Params) {
   if (!p || !cs) notFound();
 
   return (
-    <main id="main" className="lab case">
+    <main id="main" className="labpage case">
       <Link className="case__back text-meta" href="/lab">
         ← Lab
       </Link>
-      <header className="lab__head">
+      <header className="labpage__head">
         <h1 className="text-display">{p.name}</h1>
         <ul className="pentry__tags">
           {(p.tags ?? []).map((t) => (

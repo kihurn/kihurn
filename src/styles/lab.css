@@ -1,9 +1,12 @@
 /* Lab: ecosystem map, lens filter, entries, case studies */
 
-.lab{padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;display:flex;flex-direction:column;gap:var(--s-64)}
-.lab__head{display:flex;flex-direction:column;gap:var(--s-14)}
-.lab__head h1{margin:0}
-.lab__intro{max-inline-size:40rem;margin:0;opacity:.8}
+.labpage{display:flex;flex-direction:column}
+.labpage__rest{padding:var(--s-80) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;inline-size:100%;display:flex;flex-direction:column;gap:var(--s-64)}
+/* the case study pages have no wheel, so they keep the old top padding */
+.labpage.case{padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;gap:var(--s-64)}
+.labpage__head{display:flex;flex-direction:column;gap:var(--s-14)}
+.labpage__head h1{margin:0}
+.labpage__intro{max-inline-size:40rem;margin:0;opacity:.8}
 .lab-sec{display:flex;flex-direction:column;gap:var(--s-16)}
 .lab-sec__title{margin:0;opacity:.7}
 .lab-sec__note{margin:0;opacity:.7;max-inline-size:40rem}

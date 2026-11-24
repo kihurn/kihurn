@@ -35,7 +35,7 @@ function splitRoll(el: HTMLElement) {
   [...text].forEach((ch, i) => {
     const s = document.createElement("span");
     s.style.setProperty("--index", String(i));
-    s.textContent = ch;
+    s.textContent = ch === " " ? " " : ch; // a bare space would collapse
     el.appendChild(s);
   });
 }

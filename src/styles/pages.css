@@ -61,3 +61,7 @@
 @media (prefers-reduced-motion:reduce){
   .pass__inner,.pass__face{transition:none!important;animation:none!important}
 }
+
+/* about: the board owns the first screen; the facts follow below it */
+.aboutpage{display:flex;flex-direction:column}
+.aboutpage__rest{padding:var(--s-80) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;inline-size:100%;display:flex;flex-direction:column;gap:var(--s-64)}

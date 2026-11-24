@@ -73,3 +73,18 @@ export function getActivityRepos(ps: Project[]): string[] {
     .filter((p) => (p.showOnHome || p.ecosystem) && p.repo && p.repo !== "kihurn/kihurn")
     .map((p) => p.repo as string);
 }
+
+export const LENS_LABEL: Record<Lens, string> = {
+  networking: "NETWORKING",
+  fullstack: "FULL STACK",
+  ai: "AI",
+  security: "SECURITY",
+};
+
+/** Featured work leads the wheels; the rest follow in content order. */
+export function wheelOrder(ps: Project[]): Project[] {
+  return [...ps.filter((p) => p.featured), ...ps.filter((p) => !p.featured)];
+}
+
+export const projectHref = (p: Project) => (p.caseStudy ? `/lab/${p.slug}` : `/lab#${p.slug}`);
+export const projectTag = (p: Project) => (p.tags?.[0] ?? p.status).toUpperCase();
