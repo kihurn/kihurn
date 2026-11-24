@@ -6,6 +6,8 @@ import { Header } from "@/components/chrome/Header";
 import { Footer } from "@/components/chrome/Footer";
 import { Overlays } from "@/components/chrome/Overlays";
 import { ChromeBehaviors } from "@/components/chrome/ChromeBehaviors";
+import { projects } from "@/content/projects";
+import { getBuilding } from "@/lib/projects";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kihurn.vercel.app"),
@@ -29,11 +31,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a className="skip-link text-meta" href="#main">
           Skip to content
         </a>
-        {/* chat status and the building project are wired in Phase 2 and 4 */}
-        <Header chatOnline={null} building={null} />
+        {/* chat status is wired in Phase 4 */}
+        <Header chatOnline={null} building={getBuilding(projects)[0]?.name ?? null} />
         {children}
         <Footer />
-        <Overlays projects={[]} />
+        <Overlays projects={projects.map(({ slug, name, caseStudy }) => ({ slug, name, caseStudy }))} />
         <ChromeBehaviors />
       </body>
     </html>
