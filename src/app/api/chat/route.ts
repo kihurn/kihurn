@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { faq } from "@/content/faq";
-import { matchFaq } from "@/lib/faq";
 import { buildSystemPrompt } from "@/lib/chat/prompt";
 import { validateChatInput } from "@/lib/chat/validate";
 import { askC0re, C0reError } from "@/lib/server/c0re";

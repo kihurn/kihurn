@@ -1,8 +1,32 @@
 import type { Metadata } from "next";
-import { PageStub } from "@/components/chrome/PageStub";
+import "../../styles/pages.css";
+import { TicketForm } from "@/components/contact/TicketForm";
+import { site } from "@/content/site";
 
-export const metadata: Metadata = { title: "Contact" };
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Send Wong Ki Hurn a ticket: internships, freelance projects, collaboration or just a hello.",
+};
 
 export default function ContactPage() {
-  return <PageStub title="Contact" />;
+  return (
+    <main id="main" className="page">
+      <header className="page__head">
+        <h1 className="text-display">Contact</h1>
+        <p className="page__intro text-body">
+          Open a ticket and I&apos;ll reply by email. Or write to <a href={`mailto:${site.email}`}>{site.email}</a>, or
+          find me on{" "}
+          <a href={site.linkedin} target="_blank" rel="noopener noreferrer">
+            LinkedIn
+          </a>{" "}
+          and{" "}
+          <a href={site.github} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+          .
+        </p>
+      </header>
+      <TicketForm email={site.email} />
+    </main>
+  );
 }
