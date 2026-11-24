@@ -1,0 +1,38 @@
+@font-face{font-family:"Geist Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(/fonts/geist-latin-wght-normal.woff2) format("woff2-variations")}
+@font-face{font-family:"Geist Mono Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(/fonts/geist-mono-latin-wght-normal.woff2) format("woff2-variations")}
+
+/* wordmark: text logo */
+.wordmark{font-family:var(--font-mono,"Geist Mono Variable",ui-monospace,monospace);font-weight:700;letter-spacing:.02em;white-space:nowrap;line-height:1}
+
+/* status bar keeps its first two readouts on phones */
+@media (width<=47.99rem){
+  .statusbar{display:flex}
+  .statusbar__chip--wide{display:none}
+}
+
+/* command palette becomes a bottom sheet on phones */
+@media (width<=47.99rem){
+  .cmd{padding:0;place-items:end stretch}
+  .cmd__panel{max-inline-size:none;border-radius:var(--r-2xl) var(--r-2xl) 0 0;max-block-size:80vh}
+}
+
+/* page transitions: native view transitions, or a short fade */
+html.is-routing main{opacity:0;transition:opacity .2s linear}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.25s}
+
+/* placeholder page body until the real pages land */
+.page-stub{min-block-size:70vh;padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-48);max-inline-size:60rem;margin-inline:auto}
+.page-stub h1{margin-block-end:var(--s-16)}
+
+/* footer */
+.footer{display:flex;flex-wrap:wrap;gap:var(--s-16) var(--s-32);justify-content:space-between;padding:var(--s-32) var(--margin) var(--s-48);border-top:1px solid var(--line)}
+.footer a{text-decoration:none}
+.footer a:hover,.footer a:focus-visible{text-decoration:underline}
+.footer__nav,.footer__links{display:flex;flex-wrap:wrap;gap:var(--s-8) var(--s-16);list-style:none;margin:0;padding:0}
+
+/* motion off when the visitor asks for it */
+@media (prefers-reduced-motion:reduce){
+  .overlay,.cmd,.cmd__panel,.notif,.notif__panel,.drawer,.drawer__sheet,.header,.navpill__pill,.themetoggle__bg{transition:none!important;animation:none!important}
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
+  html.is-routing main{transition:none!important}
+}

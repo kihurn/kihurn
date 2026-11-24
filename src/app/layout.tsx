@@ -1,33 +1,42 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import "../styles/site.css";
+import "../styles/chrome.css";
+import { site } from "@/content/site";
+import { Header } from "@/components/chrome/Header";
+import { Footer } from "@/components/chrome/Footer";
+import { Overlays } from "@/components/chrome/Overlays";
+import { ChromeBehaviors } from "@/components/chrome/ChromeBehaviors";
 
 export const metadata: Metadata = {
-  title: "Website Clone",
-  description: "Pixel-perfect website clone",
+  metadataBase: new URL("https://kihurn.vercel.app"),
+  title: { default: `${site.name} — ${site.wordmark}`, template: `%s — ${site.name}` },
+  description: site.tagline,
+  icons: { icon: "/favicon-dark.svg", apple: "/apple-touch-icon.png" },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = { themeColor: "#1e1e1e" };
+
+// set the saved theme before first paint so there is no flash
+const themeScript = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: light)").matches))document.documentElement.dataset.theme=t==="system"?"light":t}catch(e){}`;
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body suppressHydrationWarning>
+        <a className="skip-link text-meta" href="#main">
+          Skip to content
+        </a>
+        {/* chat status and the building project are wired in Phase 2 and 4 */}
+        <Header chatOnline={null} building={null} />
+        {children}
+        <Footer />
+        <Overlays projects={[]} />
+        <ChromeBehaviors />
+      </body>
     </html>
   );
 }
