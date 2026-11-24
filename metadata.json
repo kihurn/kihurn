@@ -1,6 +1,0 @@
-{
-  "name": "KIHURN — Interactive 3D Book Portfolio",
-  "description": "An interactive 3D editorial portfolio presented as a physical book on a warm lamplit wooden desk.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
