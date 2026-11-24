@@ -36,14 +36,13 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   const rightRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeRef = useRef(0);
   const sim = useRef({ pos: 0, target: 0, vel: 0, dragging: false, moved: 0, lastY: 0, lastX: 0, touch: false, lastT: 0 });
-  const [hint, setHint] = useState(false);
+  const [hint, setHint] = useState(true);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     // client-only media queries: read after mount so SSR markup stays stable
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReduced(mq.matches);
-    setHint(window.matchMedia("(pointer: coarse)").matches);
     const on = () => setReduced(mq.matches);
     mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);

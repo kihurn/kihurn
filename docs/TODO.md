@@ -17,4 +17,11 @@ Every gap rendered on the site as `TODO:` is listed here.
 - SecureFin: the README says a face match is a Euclidean distance below 0.6. The demo uses 0.6.
 
 ## Launch checks
-- (Lighthouse scores recorded in Task 3.1)
+- Lighthouse, mobile, local production build (2026-11-25). Targets: perf >= 90, a11y >= 95, SEO >= 95, LCP < 2.5 s, CLS < 0.1.
+  - `/`: perf 100, a11y 100, SEO 100, LCP 0.9 s, CLS 0.003. Passes.
+  - `/lab`: perf 91-93, a11y 100, SEO 100, CLS 0, **LCP 3.2-3.3 s (misses 2.5 s)**.
+  - `/about`: perf 95-96, a11y 100, SEO 100, CLS 0, **LCP 2.8 s (misses 2.5 s)**.
+  - Lab and About paint their main element after hydration. Open item: server-render the first frame of the Lab list and the About stamp.
+  - Fixed on the way: swipe hint was client-only (Home LCP 3.2 s -> 0.9 s); HUD label contrast raised; Geist fonts preloaded.
+- 768 px and 1920 px: no horizontal overflow on `/`, `/lab`, `/about`, `/gigs`, `/contact`, `/lab/elysium`; no console errors.
+- Carter grep: clean.
