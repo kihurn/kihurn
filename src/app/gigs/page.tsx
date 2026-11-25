@@ -1,55 +1,60 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowDown } from "lucide-react";
 import "../../styles/lab.css";
 import "../../styles/pages.css";
-import { CrewPass } from "@/components/gigs/CrewPass";
+import { EventShowcase } from "@/components/gigs/EventShowcase";
+import { LanyardStage } from "@/components/studio/LanyardStage";
 import { events } from "@/content/gigs";
 import { media } from "@/data/media";
 import { availableMedia } from "@/lib/server/media";
-import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 
 export const metadata: Metadata = {
   title: "Gigs",
-  description: "When Ki Hurn isn't building, he's usually crewing events.",
+  description: "Event crew work and studio practice by Wong Ki Hurn.",
 };
+
+const slides = events.map((event) => ({ ...event, photo: availableMedia(media.gigs[event.slug]) }));
 
 export default function GigsPage() {
   return (
-    <main id="main" className="page">
-      <header className="page__head">
-        <h1 className="text-display">Gigs</h1>
-        <p className="text-body page__intro">
-          When I&apos;m not building, I&apos;m usually crewing events. This is the secondary side of the site: the IT work
-          lives in the Lab.
-        </p>
-      </header>
-
-      <section className="gigs__pass" aria-label="Crew pass">
-        <CrewPass />
+    <main id="main" className="page gigs">
+      <section className="gigs__hero" aria-labelledby="gigs-h">
+        <LanyardStage />
+        <header className="gigs__intro page__head">
+          <div>
+            <h1 id="gigs-h" className="text-display">Gigs</h1>
+            <p className="text-body page__intro">Event crew work and studio practice.</p>
+          </div>
+          <a className="gigs__jump" href="#events">Browse events <ArrowDown size={18} aria-hidden="true" /></a>
+        </header>
       </section>
 
-      <section className="page__sec" aria-labelledby="events-h">
-        <h2 id="events-h" className="page__title text-label">
-          Events
-        </h2>
-        <ul className="events">
-          {events.map((e) => (
-            <li key={e.slug} className="event" data-event>
-              <OptionalPhoto
-                className="event__photo"
-                src={availableMedia(media.gigs[e.slug])}
-                width={640}
-                height={400}
-                alt={e.name}
-              >
-                <Image className="event__photo" src="/placeholder/event.svg" width={640} height={400} alt="" unoptimized />
-              </OptionalPhoto>
-              <h3 className="event__name text-display">{e.name}</h3>
-              <p className="event__role text-body">{e.role}</p>
-              {e.detail ? <p className="event__detail text-body">{e.detail}</p> : null}
-            </li>
-          ))}
-        </ul>
+      <EventShowcase slides={slides} />
+
+      <section className="page__sec" aria-labelledby="studio-specs">
+        <h2 id="studio-specs" className="text-h2">Practice &amp; availability</h2>
+        <div className="studio-grid">
+          <article className="studio-cell">
+            <h3 className="text-h6">Backend &amp; Self-Hosted Infra</h3>
+            <p className="text-body-sm u-muted">
+              PostgreSQL row-level security, Rust gateways (C0RE), Tailscale private tunnels, and campus networking.
+            </p>
+          </article>
+          <article className="studio-cell">
+            <h3 className="text-h6">Print-Shop Web &amp; Shaders</h3>
+            <p className="text-body-sm u-muted">
+              Three.js GLSL pipelines, Verlet mechanics, accessible keyboard palettes, and crisp architectural grids.
+            </p>
+          </article>
+          <article className="studio-cell">
+            <h3 className="text-h6">Open for Internships &amp; Select Builds</h3>
+            <p className="text-body-sm u-muted">
+              Based in Subang Jaya, Malaysia.{" "}
+              <Link href="/contact" className="u-link">Open a ticket at Counter 01 →</Link>
+            </p>
+          </article>
+        </div>
       </section>
 
       <section className="page__sec" aria-label="Scrapbook">

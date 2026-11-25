@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { crewRoles } from "@/content/gigs";
 import { disposeScene } from "@/lib/disposeScene";
 import { computeBadgePose, type VerletChain } from "@/lib/physics/verlet";
 
@@ -8,44 +9,36 @@ function badgePrint(back: boolean) {
   canvas.height = 930;
   const ctx = canvas.getContext("2d")!;
   ctx.scale(3, 3);
-  ctx.fillStyle = "#e9e7df";
+  ctx.fillStyle = "#e8e2d6";
   ctx.fillRect(0, 0, 280, 310);
-  ctx.fillStyle = "#21211e";
-  ctx.fillRect(12, 12, 256, 286);
-  ctx.fillStyle = "#f3f0e7";
-  ctx.fillRect(14, 14, 252, 282);
+  ctx.fillStyle = "#780606";
+  ctx.fillRect(0, 0, 280, 9);
   ctx.fillStyle = "#22211d";
   ctx.font = "bold 10px monospace";
-  ctx.fillText(back ? "PRESS MANIFEST" : "KIHURN STUDIO", 25, 38);
+  ctx.fillText(back ? "CREW ROLES" : "KIHURN", 25, 37);
   ctx.textAlign = "right";
-  ctx.fillText(back ? "REV::2026.11" : "ID::KH-001", 253, 38);
+  if (!back) ctx.fillText("EVENT CREW", 253, 37);
   ctx.textAlign = "left";
-  ctx.fillRect(25, 48, 228, 1);
+  ctx.fillRect(25, 49, 228, 1);
 
   if (back) {
-    const rows = [
-      ["RUNTIME", "NEXT 16 · TS · THREE.JS"],
-      ["GATEWAY", "C0RE (RUST + OLLAMA)"],
-      ["MESH", "TAILSCALE PRIVATE"],
-      ["TIMEZONE", "ASIA/KUALA_LUMPUR (+08)"],
-      ["CLEARANCE", "FULL-STACK / NET / AI"],
-    ];
-    rows.forEach(([label, value], i) => {
-      const y = 73 + 37 * i;
-      ctx.fillStyle = "#706b5b";
-      ctx.fillText(label, 26, y);
-      ctx.fillStyle = "#161512";
-      ctx.fillText(value, 26, y + 13);
+    ctx.font = "15px monospace";
+    crewRoles.forEach((role, i) => {
+      const y = 76 + 32 * i;
+      ctx.fillStyle = "#22211d";
+      ctx.fillText(role, 25, y);
+      ctx.fillStyle = "#bcb4a5";
+      ctx.fillRect(25, y + 9, 228, 1);
     });
   } else {
     ctx.fillStyle = "#22211d";
-    ctx.fillRect(25, 58, 228, 125);
+    ctx.fillRect(25, 61, 228, 146);
     ctx.fillStyle = "#d7d2c4";
-    for (let y = 65; y < 179; y += 4) {
+    for (let y = 68; y < 202; y += 4) {
       for (let x = 32; x < 250; x += 4) {
         const nx = (x - 139) / 52;
-        const ny = (y - 108) / 43;
-        const face = Math.hypot(nx, ny) < 0.75 || (y > 139 && Math.hypot(nx * 0.61, (y - 181) / 33) < 1);
+        const ny = (y - 121) / 43;
+        const face = Math.hypot(nx, ny) < 0.75 || (y > 147 && Math.hypot(nx * 0.61, (y - 193) / 33) < 1);
         ctx.beginPath();
         ctx.arc(x, y, face ? 1.25 : 0.37, 0, Math.PI * 2);
         ctx.fill();
@@ -53,13 +46,13 @@ function badgePrint(back: boolean) {
     }
     ctx.fillStyle = "#22211d";
     ctx.font = "600 24px sans-serif";
-    ctx.fillText("Wong Ki Hurn", 25, 211);
-    ctx.font = "bold 10px monospace";
-    ctx.fillText("CS & SYSTEMS ENGINEER", 26, 230);
-    ctx.font = "9px monospace";
-    ctx.fillText("SUBANG JAYA, MY · BOOKING OPEN", 26, 252);
+    ctx.fillText("Wong Ki Hurn", 25, 242);
+    ctx.fillStyle = "#780606";
+    ctx.fillRect(0, 264, 280, 46);
+    ctx.fillStyle = "#fff4e9";
+    ctx.font = "bold 12px monospace";
+    ctx.fillText("CREW · ALL ACCESS", 25, 292);
   }
-  for (let x = 25; x < 251; x += 3 + (x % 7) % 4) ctx.fillRect(x, 266, 1 + (x % 3), 14);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
   return map;
@@ -119,11 +112,11 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
   const cordMapCanvas = document.createElement("canvas");
   cordMapCanvas.width = cordMapCanvas.height = 32;
   const weave = cordMapCanvas.getContext("2d")!;
-  weave.fillStyle = "#262421";
+  weave.fillStyle = "#490f13";
   weave.fillRect(0, 0, 32, 32);
   for (let y = 0; y < 32; y += 3) {
     for (let x = 0; x < 32; x += 4) {
-      weave.fillStyle = (x / 4 + y / 3) % 2 ? "#514a3d" : "#141412";
+      weave.fillStyle = (x / 4 + y / 3) % 2 ? "#743134" : "#290c10";
       weave.fillRect(x, y, 3, 2);
     }
   }

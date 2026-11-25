@@ -41,8 +41,12 @@ test.describe("Gigs", () => {
     const pass = page.getByRole("button", { name: /crew pass/i });
     await expect(pass).toContainText("CREW · ALL ACCESS");
     await expect(pass).toHaveAttribute("aria-pressed", "false");
-    if (isMobile) await pass.tap();
-    else await pass.click();
+    await page.waitForFunction(() => {
+      const pass = document.querySelector(".lanyard__badge")?.getBoundingClientRect();
+      return !document.documentElement.dataset.preloader && pass && pass.top > 100 && pass.bottom < innerHeight;
+    });
+    if (isMobile) await pass.tap({ force: true });
+    else await pass.click({ force: true });
     await expect(pass).toHaveAttribute("aria-pressed", "true");
     for (const r of ROLES) await expect(page.locator("[data-pass-back]").getByText(r, { exact: true })).toBeVisible();
   });
@@ -69,19 +73,27 @@ test.describe("Gigs", () => {
     for (const v of d) expect(v.split(",").every((x) => parseFloat(x) === 0)).toBe(true);
   });
 
-  test("four event cards use finished copy and a two-column desktop grid", async ({ page, isMobile }) => {
+  test("four event cards scroll horizontally and open role details", async ({ page, isMobile }) => {
     await page.goto("/gigs");
+    await hydrated(page);
     const cards = page.locator("[data-event]");
     await expect(cards).toHaveCount(4);
-    await expect(cards.filter({ hasText: "WNBF Malaysia 2025" })).toHaveCount(1);
-    await expect(cards.filter({ hasText: "Orientation Party 2026" })).toHaveCount(1);
-    await expect(cards.filter({ hasText: "Law Ball 2025" })).toHaveCount(1);
-    await expect(cards.filter({ hasText: "Circus Funtasia" })).toContainText("Event Crew & Production");
-    await expect(page.locator(".events")).not.toContainText("TODO:");
-    const columns = await page.locator(".events").evaluate((element) =>
-      getComputedStyle(element).gridTemplateColumns.split(" ").length,
-    );
-    expect(columns).toBe(isMobile ? 1 : 2);
+    await page.getByRole("button", { name: "Next event" }).click();
+    await expect.poll(() => page.locator(".events").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    const event = page.getByRole("button", { name: "Circus Funtasia" });
+    if (isMobile) await event.tap();
+    else await event.click();
+    const details = page.getByRole("dialog", { name: "Circus Funtasia" });
+    await expect(details).toContainText("Event Crew & Production");
+    await details.getByRole("button", { name: "Close" }).click();
+    await expect(details).not.toBeVisible();
+    await expect(event).toBeFocused();
+  });
+
+  test("the former Studio route leads to the combined Gigs page", async ({ page }) => {
+    await page.goto("/studio");
+    await expect(page).toHaveURL(/\/gigs$/);
+    await expect(page.getByRole("heading", { name: "Practice & availability" })).toBeVisible();
   });
 
   test("the scrapbook link goes to the book site", async ({ page }) => {

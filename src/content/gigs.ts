@@ -32,8 +32,8 @@ export const events: GigEvent[] = [
   {
     slug: "orientation-party-2026",
     name: "Orientation Party 2026",
-    role: "Taylor's Orientation Party",
-    detail: "I also built its ticketing platform, Elysium.",
+    role: "Ticketing platform developer",
+    detail: "I built Elysium for attendee registration, ticket collection, and gate check-in.",
   },
   {
     slug: "law-ball-2025",
