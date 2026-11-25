@@ -132,9 +132,9 @@ export function AboutBehaviors() {
             const centerY = inspecting ? window.innerHeight / 2 - 12 : slot.top + slot.height / 2;
             const x = Math.max(-1, Math.min(1, (pointer.clientX - centerX) * 2 / Math.max(1, slot.width * scale)));
             const y = Math.max(-1, Math.min(1, (pointer.clientY - centerY) * 2 / Math.max(1, slot.height * scale)));
-            const cassette = surface.classList.contains("cassette__body");
-            surface.style.setProperty("--tilt-x", `${-y * (cassette ? 17 : 8)}deg`);
-            surface.style.setProperty("--tilt-y", `${x * (cassette ? 25 : 11)}deg`);
+            const hardware = surface.matches(".cassette__body,.turntable");
+            surface.style.setProperty("--tilt-x", `${-y * (hardware ? 17 : 8)}deg`);
+            surface.style.setProperty("--tilt-y", `${x * (hardware ? 25 : 11)}deg`);
             surface.style.setProperty("--hover-x", `${x * (inspecting ? 5 : 13)}px`);
             surface.style.setProperty("--hover-y", `${y * (inspecting ? 4 : 9)}px`);
             surface.style.setProperty("--shine-x", `${50 + 45 * x}%`);

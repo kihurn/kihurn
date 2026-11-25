@@ -4,7 +4,7 @@ import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 import { media } from "@/data/media";
 import { availableMedia } from "@/lib/server/media";
 import { ContributionCalendar } from "./ContributionCalendar";
-import { Cassette } from "./Cassette";
+import { Turntable } from "./Turntable";
 
 export function AboutBoard() {
   return (
@@ -263,14 +263,14 @@ export function AboutBoard() {
         </article>
         </div>
 
-        <div className="ov3__slot ov3__slot--cassette">
+        <div className="ov3__slot ov3__slot--turntable">
         <article
-          className="ov3__item ov3__cassette"
+          className="ov3__item ov3__turntable"
           data-canvas-item
           tabIndex={0}
-          aria-label="Now playing cassette"
+          aria-label="Now playing turntable"
         >
-          <Cassette />
+          <Turntable />
         </article>
         </div>
       </div>
