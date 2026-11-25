@@ -8,13 +8,13 @@ export function dispatchThemeBurst(detail: ThemeBurstDetail) {
   window.dispatchEvent(new CustomEvent("kh:theme-burst", { detail }));
 }
 
-type Dot = { x: number; y: number; radius: number; shade: number };
-type Wake = { dx: number; dy: number; x: number; y: number; energy: number; at: number };
+type Dot = { x: number; y: number; radius: number; shade: number; glows: boolean };
+type Point = { x: number; y: number };
 type Sample = { x: number; y: number; start: number };
 type Wave = Sample & { reach: number };
 
-const WAKE_MS = 560;
-const WAKE_RADIUS = 112;
+const HOVER_RADIUS = 112;
+const HOVER_EASE_MS = 38;
 const WAVE_SPEED = 1.05;
 const WAVE_WIDTH = 124;
 const LEVELS = 24;
@@ -46,10 +46,11 @@ export function GlobalDotField() {
 
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
     const waves: Wave[] = [];
-    const wake = new Map<Dot, Wake>();
-    const wakeLevels: Dot[][] = Array.from({ length: LEVELS + 1 }, () => []);
+    const hoverLevels: Dot[][] = Array.from({ length: LEVELS + 1 }, () => []);
+    const glowLevels: Dot[][] = Array.from({ length: LEVELS + 1 }, () => []);
     let levels: Dot[][] = [];
-    let hoverRows: Dot[][] = [];
+    let dotRows: Dot[][] = [];
+    let pitch = 1;
     let rowHeight = 1;
     let width = 0;
     let height = 0;
@@ -57,7 +58,9 @@ export function GlobalDotField() {
     let lastFrame = 0;
     let ink = "#e8e8e4";
     let lightTheme = false;
-    let previous: Sample | undefined;
+    let pointer: Point | undefined;
+    let hover: Point = { x: 0, y: 0 };
+    let hoverStrength = 0;
 
     function kick() {
       if (!frame && !document.hidden) frame = requestAnimationFrame(draw);
@@ -74,37 +77,17 @@ export function GlobalDotField() {
 
       ctx.clearRect(0, 0, width, height);
       ctx.drawImage(texture, 0, 0, width, height);
-      if (wake.size) {
-        const originals: Dot[] = [];
-        for (const bucket of wakeLevels) bucket.length = 0;
-        const blend = 1 - Math.exp(-dt / 38);
-        for (const [dot, motion] of wake) {
-          const age = Math.max(0, now - motion.at);
-          const fade = Math.max(0, 1 - age / WAKE_MS);
-          const spring = Math.cos(age / 74) * fade ** 2.4;
-          motion.x += (motion.dx * spring - motion.x) * blend;
-          motion.y += (motion.dy * spring - motion.y) * blend;
-          if (!fade && Math.abs(motion.x) + Math.abs(motion.y) < .12) {
-            wake.delete(dot);
-            continue;
-          }
-          const alpha = idleInk(dot.shade) + motion.energy * .68 * fade ** 1.65;
-          originals.push(dot);
-          wakeLevels[Math.max(1, Math.round(alpha * LEVELS))].push({
-            ...dot, x: dot.x + motion.x, y: dot.y + motion.y,
-          });
-        }
-        ctx.globalCompositeOperation = "destination-out";
-        paintDots(ctx, originals);
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = ink;
-        for (let i = 1; i <= LEVELS; i++) {
-          if (!wakeLevels[i].length) continue;
-          ctx.globalAlpha = i / LEVELS;
-          paintDots(ctx, wakeLevels[i]);
-        }
-        ctx.globalAlpha = 1;
+      const blend = 1 - Math.exp(-dt / HOVER_EASE_MS);
+      const targetStrength = pointer ? 1 : 0;
+      hoverStrength += (targetStrength - hoverStrength) * blend;
+      const fading = Math.abs(targetStrength - hoverStrength) > .005;
+      if (!fading) hoverStrength = targetStrength;
+      if (pointer) {
+        hover.x += (pointer.x - hover.x) * blend;
+        hover.y += (pointer.y - hover.y) * blend;
       }
+      const tracking = !!pointer && Math.hypot(pointer.x - hover.x, pointer.y - hover.y) > .2;
+      if (hoverStrength) paintHover(ctx);
       if (waves.length) {
         light.clearRect(0, 0, width, height);
         for (const wave of waves) {
@@ -129,11 +112,58 @@ export function GlobalDotField() {
         light.globalCompositeOperation = "source-over";
         ctx.drawImage(lighting, 0, 0, width, height);
       }
-      if (wake.size || waves.length) kick();
+      if (fading || tracking || waves.length) kick();
       else lastFrame = 0;
     }
 
-    const idleInk = (index: number) => .009 + (lightTheme ? .062 : .073) * (index / LEVELS) ** 2.4;
+    const idleInk = (index: number) => (lightTheme ? .009 : .006) + (lightTheme ? .062 : .044) * (index / LEVELS) ** 2.4;
+
+    function paintHover(context: CanvasRenderingContext2D) {
+      const { x, y } = hover;
+      const left = Math.floor(x - HOVER_RADIUS);
+      const top = Math.floor(y - HOVER_RADIUS);
+      const size = HOVER_RADIUS * 2 + 1;
+      const firstRow = Math.max(0, Math.floor(top / rowHeight) - 1);
+      const lastRow = Math.min(dotRows.length - 1, Math.ceil((top + size) / rowHeight) + 1);
+      const firstCol = Math.max(0, Math.floor(left / pitch) - 1);
+      for (const bucket of hoverLevels) bucket.length = 0;
+      for (const bucket of glowLevels) bucket.length = 0;
+
+      for (let row = firstRow; row <= lastRow; row++) {
+        const dots = dotRows[row];
+        const lastCol = Math.min(dots.length - 1, Math.ceil((left + size) / pitch) + 1);
+        for (let col = firstCol; col <= lastCol; col++) {
+          const dot = dots[col];
+          const dx = dot.x - x;
+          const dy = dot.y - y;
+          const falloff = Math.max(0, 1 - Math.hypot(dx, dy) / HOVER_RADIUS);
+          const bend = hoverStrength * falloff ** 2 * (19 / HOVER_RADIUS);
+          const shifted = falloff ? { ...dot, x: dot.x + dx * bend, y: dot.y + dy * bend } : dot;
+          hoverLevels[dot.shade].push(shifted);
+          if (dot.glows) {
+            const glow = Math.round(LEVELS * .34 * hoverStrength * falloff ** 1.45);
+            if (glow) glowLevels[glow].push(shifted);
+          }
+        }
+      }
+
+      context.save();
+      context.beginPath();
+      context.rect(left, top, size, size);
+      context.clip();
+      context.clearRect(left, top, size, size);
+      context.fillStyle = ink;
+      hoverLevels.forEach((dots, index) => {
+        context.globalAlpha = idleInk(index);
+        paintDots(context, dots);
+      });
+      glowLevels.forEach((dots, index) => {
+        if (!dots.length) return;
+        context.globalAlpha = index / LEVELS;
+        paintDots(context, dots);
+      });
+      context.restore();
+    }
 
     function paintTheme() {
       if (!base) return;
@@ -161,14 +191,14 @@ export function GlobalDotField() {
       }
       for (const context of [ctx, base, all, light]) context.setTransform(dpr, 0, 0, dpr, 0, 0);
       const allDots: Dot[] = [];
-      const pitch = Math.max(4.8, Math.sqrt(width * height / (65_000 * .866)));
+      pitch = Math.max(4.8, Math.sqrt(width * height / (65_000 * .866)));
       rowHeight = pitch * .866;
       const cols = Math.ceil(width / pitch) + 1;
       const rows = Math.ceil(height / rowHeight) + 1;
       levels = Array.from({ length: LEVELS + 1 }, () => []);
-      hoverRows = Array.from({ length: rows }, () => []);
-      wake.clear();
-      previous = undefined;
+      dotRows = Array.from({ length: rows }, () => []);
+      pointer = undefined;
+      hoverStrength = 0;
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -178,15 +208,17 @@ export function GlobalDotField() {
           const v = row / Math.max(1, rows - 1);
           const band = .5 + .5 * Math.sin(10 * u - 7 * v + 1.8 * Math.sin(5 * v));
           const falloff = 1 - Math.min(1, Math.hypot(u - .58, v - .42));
+          const cluster = Math.imul(Math.imul((col >> 1) + 17, 374761393) ^ Math.imul((row >> 1) + 31, 668265263), 1274126177);
           const dot = {
             x: (col + row % 2 * .5 + (((seed >>> 8) & 7) - 3.5) * .009) * pitch,
             y: (row + (((seed >>> 11) & 7) - 3.5) * .009) * rowHeight,
             radius: pitch * (.44 + band * .025),
             shade: Math.round((band * .62 + falloff * .26 + grain * .12) * LEVELS),
+            glows: (cluster >>> 24) < 26,
           };
           levels[dot.shade].push(dot);
           allDots.push(dot);
-          if (((seed >>> 20) & 255) < 26) hoverRows[row].push(dot);
+          dotRows[row].push(dot);
         }
       }
       paintDots(all, allDots);
@@ -196,36 +228,15 @@ export function GlobalDotField() {
     function move(event: PointerEvent) {
       if (motion.matches || document.hidden || event.pointerType === "touch") return;
       const { clientX: x, clientY: y } = event;
-      const start = performance.now();
-      const from = previous && start - previous.start < 130 ? previous : { x, y, start };
-      const distance = Math.hypot(x - from.x, y - from.y);
-      if (previous && start - previous.start < 130 && distance < 13) return;
-      const steps = Math.max(1, Math.min(10, Math.ceil(distance / 17)));
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        const sx = from.x + (x - from.x) * t;
-        const sy = from.y + (y - from.y) * t;
-        const first = Math.max(0, Math.floor((sy - WAKE_RADIUS) / rowHeight));
-        const last = Math.min(hoverRows.length - 1, Math.ceil((sy + WAKE_RADIUS) / rowHeight));
-        for (let row = first; row <= last; row++) {
-          for (const dot of hoverRows[row]) {
-            const dx = dot.x - sx;
-            if (dx < -WAKE_RADIUS) continue;
-            if (dx > WAKE_RADIUS) break;
-            const dy = dot.y - sy;
-            const length = Math.hypot(dx, dy);
-            if (length >= WAKE_RADIUS) continue;
-            const energy = (1 - length / WAKE_RADIUS) ** 1.55;
-            const current = wake.get(dot);
-            if (current && current.energy * Math.max(0, 1 - (start - current.at) / WAKE_MS) > energy) continue;
-            const push = 7 * energy / Math.max(7, length);
-            wake.set(dot, { dx: dx * push, dy: dy * push, x: current?.x ?? 0, y: current?.y ?? 0, energy, at: start });
-          }
-        }
-      }
-      previous = { x, y, start };
+      if (!hoverStrength) hover = { x, y };
+      pointer = { x, y };
       kick();
     }
+
+    const leave = () => {
+      pointer = undefined;
+      kick();
+    };
 
     function launchWave(x: number, y: number) {
       if (motion.matches || document.hidden) return;
@@ -248,9 +259,9 @@ export function GlobalDotField() {
     const stop = () => {
       cancelAnimationFrame(frame);
       frame = 0;
-      previous = undefined;
+      pointer = undefined;
       waves.length = 0;
-      wake.clear();
+      hoverStrength = 0;
       lastFrame = 0;
       kick();
     };
@@ -260,6 +271,7 @@ export function GlobalDotField() {
     resize();
     window.addEventListener("resize", resize);
     window.addEventListener("pointermove", move, { passive: true, capture: true });
+    document.documentElement.addEventListener("pointerleave", leave);
     window.addEventListener("pointerdown", down, { passive: true, capture: true });
     window.addEventListener("kh:theme-burst", themeBurst);
     window.addEventListener("blur", stop);
@@ -271,6 +283,7 @@ export function GlobalDotField() {
       theme.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", move, true);
+      document.documentElement.removeEventListener("pointerleave", leave);
       window.removeEventListener("pointerdown", down, true);
       window.removeEventListener("kh:theme-burst", themeBurst);
       window.removeEventListener("blur", stop);
