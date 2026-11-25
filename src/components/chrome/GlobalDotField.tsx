@@ -8,14 +8,16 @@ export function dispatchThemeBurst(detail: ThemeBurstDetail) {
   window.dispatchEvent(new CustomEvent("kh:theme-burst", { detail }));
 }
 
-type Dot = { x: number; y: number; radius: number; pulses: boolean };
+type Dot = { x: number; y: number; radius: number; trailReach: number; pulses: boolean; waveOffset: number };
 type Point = { x: number; y: number };
 type Wave = Point & { start: number; reach: number };
 
-const TRAIL_RADIUS = 22;
+const TRAIL_DENSITY = .28;
 const TRAIL_DURATION = 300;
 const WAVE_SPEED = 1.05;
-const WAVE_HALF_WIDTH = 16;
+const WAVE_HALF_WIDTH = 33;
+const WAVE_SCATTER = 35;
+const WAVE_EXTENT = WAVE_HALF_WIDTH + WAVE_SCATTER;
 const LEVELS = 24;
 
 function paintDots(context: CanvasRenderingContext2D, dots: Dot[]) {
@@ -47,6 +49,7 @@ export function GlobalDotField() {
     let trailRows: Dot[][] = [];
     let pitch = 1;
     let rowHeight = 1;
+    let trailRadius = 0;
     let width = 0;
     let height = 0;
     let frame = 0;
@@ -65,7 +68,7 @@ export function GlobalDotField() {
       frame = 0;
       if (!ctx || document.hidden) return;
       for (let i = waves.length - 1; i >= 0; i--) {
-        if ((now - waves[i].start) * WAVE_SPEED > waves[i].reach + WAVE_HALF_WIDTH) waves.splice(i, 1);
+        if ((now - waves[i].start) * WAVE_SPEED > waves[i].reach + WAVE_EXTENT) waves.splice(i, 1);
       }
 
       ctx.clearRect(0, 0, width, height);
@@ -90,8 +93,9 @@ export function GlobalDotField() {
 
     function paintWave(context: CanvasRenderingContext2D, wave: Wave, now: number) {
       const radius = Math.max(0, (now - wave.start) * WAVE_SPEED);
-      const outer = radius + WAVE_HALF_WIDTH;
-      const inner = Math.max(0, radius - WAVE_HALF_WIDTH);
+      const outer = radius + WAVE_EXTENT;
+      const innerSquared = Math.max(0, radius - WAVE_EXTENT) ** 2;
+      const scatter = Math.min(1, radius / 100);
       const firstRow = Math.max(0, Math.ceil((wave.y - outer) / rowHeight));
       const lastRow = Math.min(dotRows.length - 1, Math.floor((wave.y + outer) / rowHeight));
       const lit: Dot[] = [];
@@ -104,7 +108,13 @@ export function GlobalDotField() {
         const lastCol = Math.min(dots.length - 1, Math.floor((wave.x + extent - dots[0].x) / pitch));
         for (let col = firstCol; col <= lastCol; col++) {
           const dot = dots[col];
-          if (dot.pulses && (dot.x - wave.x) ** 2 + dy ** 2 >= inner ** 2) lit.push(dot);
+          if (!dot.pulses) continue;
+          const distanceSquared = (dot.x - wave.x) ** 2 + dy ** 2;
+          if (distanceSquared < innerSquared) continue;
+          const center = radius + dot.waveOffset * scatter;
+          const edgeIn = Math.max(0, center - WAVE_HALF_WIDTH);
+          const edgeOut = center + WAVE_HALF_WIDTH;
+          if (distanceSquared >= edgeIn ** 2 && distanceSquared <= edgeOut ** 2) lit.push(dot);
         }
       }
 
@@ -130,6 +140,7 @@ export function GlobalDotField() {
       if (!canvas || !ctx || !base) return;
       width = document.documentElement.clientWidth;
       height = innerHeight;
+      trailRadius = Math.min(136, Math.min(width, height) * .15);
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
       for (const buffer of [canvas, texture]) {
         buffer.width = Math.round(width * dpr);
@@ -154,17 +165,20 @@ export function GlobalDotField() {
           const v = row / Math.max(1, rows - 1);
           const band = .5 + .5 * Math.sin(10 * u - 7 * v + 1.8 * Math.sin(5 * v));
           const falloff = 1 - Math.min(1, Math.hypot(u - .58, v - .42));
-          const cluster = Math.imul(Math.imul((col >> 1) + 17, 374761393) ^ Math.imul((row >> 1) + 31, 668265263), 1274126177);
+          const mixed = Math.imul(seed ^ (seed >>> 16), 0x7feb352d);
+          const scatter = mixed ^ (mixed >>> 16);
           const dot = {
             x: (col + row % 2 * .5) * pitch,
             y: row * rowHeight,
             radius: pitch * .27,
-            pulses: ((seed >>> 12) & 255) < 51,
+            trailReach: 1 - (scatter >>> 24) / (256 * TRAIL_DENSITY),
+            pulses: (scatter & 255) < 140,
+            waveOffset: ((((scatter >>> 8) & 255) / 255) * 2 - 1) * WAVE_SCATTER,
           };
           const shade = Math.round((band * .62 + falloff * .26 + grain * .12) * LEVELS);
           levels[shade].push(dot);
           dotRows[row].push(dot);
-          if ((cluster >>> 24) < 18) trailRows[row].push(dot);
+          if (dot.trailReach > 0) trailRows[row].push(dot);
         }
       }
       paintTheme();
@@ -180,10 +194,10 @@ export function GlobalDotField() {
       const dy = to.y - from.y;
       const lengthSquared = dx * dx + dy * dy;
       if (!lengthSquared) return;
-      const firstRow = Math.max(0, Math.ceil((Math.min(from.y, to.y) - TRAIL_RADIUS) / rowHeight));
-      const lastRow = Math.min(trailRows.length - 1, Math.floor((Math.max(from.y, to.y) + TRAIL_RADIUS) / rowHeight));
-      const left = Math.min(from.x, to.x) - TRAIL_RADIUS;
-      const right = Math.max(from.x, to.x) + TRAIL_RADIUS;
+      const firstRow = Math.max(0, Math.ceil((Math.min(from.y, to.y) - trailRadius) / rowHeight));
+      const lastRow = Math.min(trailRows.length - 1, Math.floor((Math.max(from.y, to.y) + trailRadius) / rowHeight));
+      const left = Math.min(from.x, to.x) - trailRadius;
+      const right = Math.max(from.x, to.x) + trailRadius;
       const expiry = performance.now() + TRAIL_DURATION;
       for (let row = firstRow; row <= lastRow; row++) {
         for (const dot of trailRows[row]) {
@@ -192,7 +206,7 @@ export function GlobalDotField() {
           const x = dot.x - from.x;
           const y = dot.y - from.y;
           const t = Math.max(0, Math.min(1, (x * dx + y * dy) / lengthSquared));
-          if ((x - t * dx) ** 2 + (y - t * dy) ** 2 <= TRAIL_RADIUS ** 2) trail.set(dot, expiry);
+          if ((x - t * dx) ** 2 + (y - t * dy) ** 2 <= (dot.trailReach * trailRadius) ** 2) trail.set(dot, expiry);
         }
       }
       kick();
