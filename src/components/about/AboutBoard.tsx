@@ -4,7 +4,7 @@ import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 import { media } from "@/data/media";
 import { availableMedia } from "@/lib/server/media";
 import { ContributionCalendar } from "./ContributionCalendar";
-import { Turntable } from "./Turntable";
+import { Cassette } from "./Cassette";
 
 export function AboutBoard() {
   return (
@@ -20,10 +20,10 @@ export function AboutBoard() {
       </header>
 
       <div className="ov3__board">
+        <div className="ov3__slot ov3__slot--postcard">
         <section
           className="ov3__item ov3__hero"
           data-canvas-item
-          data-rot="0"
           tabIndex={0}
           aria-label="Wong Ki Hurn"
         >
@@ -223,12 +223,13 @@ export function AboutBoard() {
             </article>
           </div>
         </section>
+        </div>
 
+        <div className="ov3__slot ov3__slot--telemetry">
         <article
           className="ov3__item ov3__tele u-card"
           data-canvas-item
           data-depth-card
-          data-rot="-1.3"
           tabIndex={0}
           data-about
           data-state="boot"
@@ -260,18 +261,19 @@ export function AboutBoard() {
             </span>
           </div>
         </article>
+        </div>
 
+        <div className="ov3__slot ov3__slot--cassette">
         <article
-          className="ov3__item ov3__radio-card u-card"
+          className="ov3__item ov3__cassette"
           data-canvas-item
           data-depth-card
-          data-rot="1.4"
           tabIndex={0}
-          data-radio-card
-          aria-label="Music rotation"
+          aria-label="Now playing cassette"
         >
-          <Turntable sources={media.radio.map(({ art, audio }) => ({ art: availableMedia(art), audio: availableMedia(audio) }))} />
+          <Cassette />
         </article>
+        </div>
       </div>
 
       <div className="ov3__scrim" data-canvas-scrim hidden aria-hidden="true" />

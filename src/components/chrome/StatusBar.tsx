@@ -4,15 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { formatLcpMetric } from "@/lib/chrome";
 import { subscribeFps } from "@/lib/telemetry";
 import { formatKLTime } from "@/lib/time";
+import { useNowPlaying } from "./NowPlayingProvider";
 
 interface Props {
   chatOnline: boolean | null;
-  building: string | null;
 }
 
-const ROTATION = ["Nujabes — Feather", "Ryo Fukui — Scenery", "LAMP — Yume Utsutsu"] as const;
-
-export function StatusBar({ chatOnline: initial, building }: Props) {
+export function StatusBar({ chatOnline: initial }: Props) {
+  const nowPlaying = useNowPlaying();
   const [chatOnline, setChatOnline] = useState<boolean | null>(initial);
   const [lcp, setLcp] = useState<string>("—");
   const barRef = useRef<HTMLDivElement>(null);
@@ -128,7 +127,7 @@ export function StatusBar({ chatOnline: initial, building }: Props) {
   }, []);
 
   const onlineText = chatOnline === null ? "SYNC" : chatOnline ? "C0RE" : "STANDBY";
-  const track = building ? `${ROTATION[0]}` : ROTATION[1];
+  const track = nowPlaying?.status === "playing" ? `${nowPlaying.artist} — ${nowPlaying.title}` : "OFF AIR";
 
   return (
     <div ref={barRef} className="hud statusbar" data-statusbar aria-label="Telemetry HUD">

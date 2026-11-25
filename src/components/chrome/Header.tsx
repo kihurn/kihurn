@@ -7,13 +7,12 @@ import { NAV } from "./nav";
 
 interface Props {
   chatOnline: boolean | null;
-  building: string | null;
 }
 
-export function Header({ chatOnline, building }: Props) {
+export function Header({ chatOnline }: Props) {
   return (
     <header className="header" data-header data-theme="dark" data-theme-mode="dark">
-      <StatusBar chatOnline={chatOnline} building={building} />
+      <StatusBar chatOnline={chatOnline} />
       <div className="header__bar">
         <div className="header__lead">
           <Link className="header__logo" href="/" aria-label="KIHURN., home">

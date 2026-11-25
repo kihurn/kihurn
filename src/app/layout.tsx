@@ -8,7 +8,7 @@ import { Overlays } from "@/components/chrome/Overlays";
 import { ChromeBehaviors } from "@/components/chrome/ChromeBehaviors";
 import { GlobalDotField } from "@/components/chrome/GlobalDotField";
 import { projects } from "@/content/projects";
-import { getBuilding } from "@/lib/projects";
+import { NowPlayingProvider } from "@/components/chrome/NowPlayingProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kihurn.vercel.app"),
@@ -34,8 +34,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a className="skip-link text-meta" href="#main">
           Skip to content
         </a>
-        <Header chatOnline={null} building={getBuilding(projects)[0]?.name ?? null} />
-        {children}
+        <NowPlayingProvider>
+          <Header chatOnline={null} />
+          {children}
+        </NowPlayingProvider>
         <Footer />
         <Overlays projects={projects.map(({ slug, name, caseStudy }) => ({ slug, name, caseStudy }))} />
         <ChromeBehaviors />

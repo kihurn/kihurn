@@ -10,11 +10,6 @@ export const media = {
     "pneumonia-cnn": "/images/projects/pneumonia-cnn.webp",
   } as Readonly<Record<string, string | undefined>>,
   portrait: "/images/portrait.jpg",
-  radio: [
-    { art: "/images/radio/feather.webp", audio: "/audio/feather.mp3" },
-    { art: "/images/radio/scenery.webp", audio: "/audio/scenery.mp3" },
-    { art: "/images/radio/yume-utsutsu.webp", audio: "/audio/yume-utsutsu.mp3" },
-  ],
   gigs: {
     "wnbf-malaysia-2025": "/images/gigs/wnbf-malaysia-2025.webp",
     "circus-funtasia": "/images/gigs/circus-funtasia.webp",
