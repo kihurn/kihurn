@@ -8,11 +8,12 @@ export function dispatchThemeBurst(detail: ThemeBurstDetail) {
   window.dispatchEvent(new CustomEvent("kh:theme-burst", { detail }));
 }
 
-type Dot = { x: number; y: number; radius: number };
+type Dot = { x: number; y: number; radius: number; pulses: boolean };
 type Point = { x: number; y: number };
 type Wave = Point & { start: number; reach: number };
 
-const HOVER_RADIUS = 112;
+const TRAIL_RADIUS = 22;
+const TRAIL_DURATION = 300;
 const WAVE_SPEED = 1.05;
 const WAVE_HALF_WIDTH = 16;
 const LEVELS = 24;
@@ -40,20 +41,24 @@ export function GlobalDotField() {
 
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
     const waves: Wave[] = [];
+    const trail = new Map<Dot, number>();
     let levels: Dot[][] = [];
     let dotRows: Dot[][] = [];
-    let hoverRows: Dot[][] = [];
+    let trailRows: Dot[][] = [];
     let pitch = 1;
     let rowHeight = 1;
     let width = 0;
     let height = 0;
     let frame = 0;
+    let trailTimer = 0;
     let ink = "#e8e8e4";
     let lightTheme = false;
     let pointer: Point | undefined;
 
     function kick() {
-      if (!frame && !document.hidden) frame = requestAnimationFrame(draw);
+      if (frame || document.hidden) return;
+      clearTimeout(trailTimer);
+      frame = requestAnimationFrame(draw);
     }
 
     function draw(now: number) {
@@ -67,29 +72,21 @@ export function GlobalDotField() {
       ctx.drawImage(texture, 0, 0, width, height);
       ctx.fillStyle = lightTheme ? "#969694" : "#595959";
       for (const wave of waves) paintWave(ctx, wave, now);
-      if (pointer) paintHover(ctx, pointer);
+      const lit: Dot[] = [];
+      let nextExpiry = Infinity;
+      for (const [dot, expiry] of trail) {
+        if (expiry <= now) trail.delete(dot);
+        else {
+          lit.push(dot);
+          nextExpiry = Math.min(expiry, nextExpiry);
+        }
+      }
+      if (lit.length) paintDots(ctx, lit);
       if (waves.length) kick();
+      else if (lit.length) trailTimer = window.setTimeout(kick, nextExpiry - now);
     }
 
     const idleInk = (index: number) => (lightTheme ? .009 : .006) + (lightTheme ? .062 : .044) * (index / LEVELS) ** 2.4;
-
-    function paintHover(context: CanvasRenderingContext2D, { x, y }: Point) {
-      const firstRow = Math.max(0, Math.ceil((y - HOVER_RADIUS) / rowHeight));
-      const lastRow = Math.min(hoverRows.length - 1, Math.floor((y + HOVER_RADIUS) / rowHeight));
-      const lit: Dot[] = [];
-
-      for (let row = firstRow; row <= lastRow; row++) {
-        for (const dot of hoverRows[row]) {
-          const dx = dot.x - x;
-          if (dx < -HOVER_RADIUS) continue;
-          if (dx > HOVER_RADIUS) break;
-          const dy = dot.y - y;
-          if (dx * dx + dy * dy <= HOVER_RADIUS * HOVER_RADIUS) lit.push(dot);
-        }
-      }
-
-      paintDots(context, lit);
-    }
 
     function paintWave(context: CanvasRenderingContext2D, wave: Wave, now: number) {
       const radius = Math.max(0, (now - wave.start) * WAVE_SPEED);
@@ -107,7 +104,7 @@ export function GlobalDotField() {
         const lastCol = Math.min(dots.length - 1, Math.floor((wave.x + extent - dots[0].x) / pitch));
         for (let col = firstCol; col <= lastCol; col++) {
           const dot = dots[col];
-          if ((dot.x - wave.x) ** 2 + dy ** 2 >= inner ** 2) lit.push(dot);
+          if (dot.pulses && (dot.x - wave.x) ** 2 + dy ** 2 >= inner ** 2) lit.push(dot);
         }
       }
 
@@ -145,8 +142,9 @@ export function GlobalDotField() {
       const rows = Math.ceil(height / rowHeight) + 1;
       levels = Array.from({ length: LEVELS + 1 }, () => []);
       dotRows = Array.from({ length: rows }, () => []);
-      hoverRows = Array.from({ length: rows }, () => []);
+      trailRows = Array.from({ length: rows }, () => []);
       pointer = undefined;
+      trail.clear();
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -161,11 +159,12 @@ export function GlobalDotField() {
             x: (col + row % 2 * .5) * pitch,
             y: row * rowHeight,
             radius: pitch * .27,
+            pulses: ((seed >>> 12) & 255) < 51,
           };
           const shade = Math.round((band * .62 + falloff * .26 + grain * .12) * LEVELS);
           levels[shade].push(dot);
           dotRows[row].push(dot);
-          if ((cluster >>> 24) < 26) hoverRows[row].push(dot);
+          if ((cluster >>> 24) < 18) trailRows[row].push(dot);
         }
       }
       paintTheme();
@@ -173,13 +172,34 @@ export function GlobalDotField() {
 
     function move(event: PointerEvent) {
       if (motion.matches || document.hidden || event.pointerType === "touch") return;
-      pointer = { x: event.clientX, y: event.clientY };
+      const from = pointer;
+      const to = { x: event.clientX, y: event.clientY };
+      pointer = to;
+      if (!from) return;
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const lengthSquared = dx * dx + dy * dy;
+      if (!lengthSquared) return;
+      const firstRow = Math.max(0, Math.ceil((Math.min(from.y, to.y) - TRAIL_RADIUS) / rowHeight));
+      const lastRow = Math.min(trailRows.length - 1, Math.floor((Math.max(from.y, to.y) + TRAIL_RADIUS) / rowHeight));
+      const left = Math.min(from.x, to.x) - TRAIL_RADIUS;
+      const right = Math.max(from.x, to.x) + TRAIL_RADIUS;
+      const expiry = performance.now() + TRAIL_DURATION;
+      for (let row = firstRow; row <= lastRow; row++) {
+        for (const dot of trailRows[row]) {
+          if (dot.x < left) continue;
+          if (dot.x > right) break;
+          const x = dot.x - from.x;
+          const y = dot.y - from.y;
+          const t = Math.max(0, Math.min(1, (x * dx + y * dy) / lengthSquared));
+          if ((x - t * dx) ** 2 + (y - t * dy) ** 2 <= TRAIL_RADIUS ** 2) trail.set(dot, expiry);
+        }
+      }
       kick();
     }
 
     const leave = () => {
       pointer = undefined;
-      kick();
     };
 
     function launchWave(x: number, y: number) {
@@ -202,9 +222,11 @@ export function GlobalDotField() {
 
     const stop = () => {
       cancelAnimationFrame(frame);
+      clearTimeout(trailTimer);
       frame = 0;
       pointer = undefined;
       waves.length = 0;
+      trail.clear();
       kick();
     };
 
@@ -222,6 +244,7 @@ export function GlobalDotField() {
 
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(trailTimer);
       theme.disconnect();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", move, true);
