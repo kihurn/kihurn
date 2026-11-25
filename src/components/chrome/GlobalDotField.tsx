@@ -12,7 +12,8 @@ type Dot = { x: number; y: number; radius: number; trailReach: number; waveSampl
 type Point = { x: number; y: number };
 type Wave = Point & { start: number; reach: number };
 
-const TRAIL_DENSITY = .28;
+const DOT_SCALE = .85;
+const TRAIL_DENSITY = .18;
 const TRAIL_DURATION = 300;
 const TRAIL_MIN_SPEED = .15;
 const TRAIL_MAX_SPEED = 1.25;
@@ -144,14 +145,14 @@ export function GlobalDotField() {
       if (!canvas || !ctx || !base) return;
       width = document.documentElement.clientWidth;
       height = innerHeight;
-      maxTrailRadius = Math.min(136, Math.min(width, height) * .15);
+      maxTrailRadius = Math.min(110, Math.min(width, height) * .12);
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
       for (const buffer of [canvas, texture]) {
         buffer.width = Math.round(width * dpr);
         buffer.height = Math.round(height * dpr);
       }
       for (const context of [ctx, base]) context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      pitch = Math.max(8.5, Math.sqrt(width * height / (100_000 * .5)));
+      pitch = DOT_SCALE * Math.max(8.5, Math.sqrt(width * height / (100_000 * .5)));
       rowHeight = pitch * .5;
       const cols = Math.ceil(width / pitch) + 1;
       const rows = Math.ceil(height / rowHeight) + 1;
