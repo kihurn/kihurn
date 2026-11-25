@@ -8,12 +8,14 @@ export function dispatchThemeBurst(detail: ThemeBurstDetail) {
   window.dispatchEvent(new CustomEvent("kh:theme-burst", { detail }));
 }
 
-type Dot = { x: number; y: number; radius: number; trailReach: number; pulses: boolean; waveOffset: number };
+type Dot = { x: number; y: number; radius: number; trailReach: number; waveSample: number; waveOffset: number };
 type Point = { x: number; y: number };
 type Wave = Point & { start: number; reach: number };
 
 const TRAIL_DENSITY = .28;
 const TRAIL_DURATION = 300;
+const TRAIL_MIN_SPEED = .15;
+const TRAIL_MAX_SPEED = 1.25;
 const WAVE_SPEED = 1.05;
 const WAVE_HALF_WIDTH = 33;
 const WAVE_SCATTER = 35;
@@ -49,14 +51,14 @@ export function GlobalDotField() {
     let trailRows: Dot[][] = [];
     let pitch = 1;
     let rowHeight = 1;
-    let trailRadius = 0;
+    let maxTrailRadius = 0;
     let width = 0;
     let height = 0;
     let frame = 0;
     let trailTimer = 0;
     let ink = "#e8e8e4";
     let lightTheme = false;
-    let pointer: Point | undefined;
+    let pointer: (Point & { time: number }) | undefined;
 
     function kick() {
       if (frame || document.hidden) return;
@@ -108,13 +110,15 @@ export function GlobalDotField() {
         const lastCol = Math.min(dots.length - 1, Math.floor((wave.x + extent - dots[0].x) / pitch));
         for (let col = firstCol; col <= lastCol; col++) {
           const dot = dots[col];
-          if (!dot.pulses) continue;
           const distanceSquared = (dot.x - wave.x) ** 2 + dy ** 2;
           if (distanceSquared < innerSquared) continue;
           const center = radius + dot.waveOffset * scatter;
           const edgeIn = Math.max(0, center - WAVE_HALF_WIDTH);
           const edgeOut = center + WAVE_HALF_WIDTH;
-          if (distanceSquared >= edgeIn ** 2 && distanceSquared <= edgeOut ** 2) lit.push(dot);
+          if (distanceSquared < edgeIn ** 2 || distanceSquared > edgeOut ** 2) continue;
+          const fromMiddle = Math.abs(Math.sqrt(distanceSquared) - radius);
+          const density = 140 + 100 * Math.max(0, 1 - fromMiddle / WAVE_HALF_WIDTH);
+          if (dot.waveSample < density) lit.push(dot);
         }
       }
 
@@ -140,7 +144,7 @@ export function GlobalDotField() {
       if (!canvas || !ctx || !base) return;
       width = document.documentElement.clientWidth;
       height = innerHeight;
-      trailRadius = Math.min(136, Math.min(width, height) * .15);
+      maxTrailRadius = Math.min(136, Math.min(width, height) * .15);
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
       for (const buffer of [canvas, texture]) {
         buffer.width = Math.round(width * dpr);
@@ -172,7 +176,7 @@ export function GlobalDotField() {
             y: row * rowHeight,
             radius: pitch * .27,
             trailReach: 1 - (scatter >>> 24) / (256 * TRAIL_DENSITY),
-            pulses: (scatter & 255) < 140,
+            waveSample: scatter & 255,
             waveOffset: ((((scatter >>> 8) & 255) / 255) * 2 - 1) * WAVE_SCATTER,
           };
           const shade = Math.round((band * .62 + falloff * .26 + grain * .12) * LEVELS);
@@ -187,13 +191,16 @@ export function GlobalDotField() {
     function move(event: PointerEvent) {
       if (motion.matches || document.hidden || event.pointerType === "touch") return;
       const from = pointer;
-      const to = { x: event.clientX, y: event.clientY };
+      const to = { x: event.clientX, y: event.clientY, time: event.timeStamp };
       pointer = to;
       if (!from) return;
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const lengthSquared = dx * dx + dy * dy;
       if (!lengthSquared) return;
+      const speed = Math.sqrt(lengthSquared) / Math.max(1, to.time - from.time);
+      const widthProgress = Math.max(0, Math.min(1, (speed - TRAIL_MIN_SPEED) / (TRAIL_MAX_SPEED - TRAIL_MIN_SPEED)));
+      const trailRadius = maxTrailRadius * (.5 + .5 * widthProgress);
       const firstRow = Math.max(0, Math.ceil((Math.min(from.y, to.y) - trailRadius) / rowHeight));
       const lastRow = Math.min(trailRows.length - 1, Math.floor((Math.max(from.y, to.y) + trailRadius) / rowHeight));
       const left = Math.min(from.x, to.x) - trailRadius;
