@@ -70,15 +70,20 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    try {
-      canvas.setPointerCapture(e.pointerId);
-    } catch {}
-
     const pt = getLocalPoint(e);
     drawingRef.current = true;
     lastPtRef.current = pt;
     hasInkRef.current = true;
     setHasInk(true);
+
+    const stopGlobal = () => {
+      drawingRef.current = false;
+      lastPtRef.current = null;
+      window.removeEventListener("pointerup", stopGlobal);
+      window.removeEventListener("pointercancel", stopGlobal);
+    };
+    window.addEventListener("pointerup", stopGlobal);
+    window.addEventListener("pointercancel", stopGlobal);
 
     ctx.strokeStyle = "#1e1e1e";
     ctx.lineWidth = e.pointerType === "pen" && e.pressure > 0 ? 1.5 + e.pressure * 1.6 : 2.2;
@@ -105,15 +110,10 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     lastPtRef.current = pt;
   };
 
-  const endStroke = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const endStroke = () => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
     lastPtRef.current = null;
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {}
   };
 
   const clearCanvas = () => {
