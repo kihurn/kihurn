@@ -3,10 +3,6 @@ export interface TornPoint {
   y: number;
 }
 
-/**
- * Generates an organic jagged/wavy torn-paper polyline along a horizontal band.
- * Deterministic for a given seed so top/bottom deckle edges look crisp without jittering uncontrollably.
- */
 export function generateTornEdgePoints(
   width: number,
   baseY: number,
@@ -31,11 +27,6 @@ export function generateTornEdgePoints(
   return pts;
 }
 
-/**
- * Computes eased progress for a two-phase bottom-to-top wipe:
- * [0..0.5]: sweeps edge up from bottom (h + pad) to top (-pad) covering the screen
- * [0.5..1]: sweeps bottom edge up from (h + pad) to (-pad) uncovering the screen
- */
 export function computeTornWipeOffsets(progress: number, height: number, pad = 48): {
   topEdgeY: number;
   bottomEdgeY: number;

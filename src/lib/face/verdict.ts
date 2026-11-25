@@ -1,6 +1,5 @@
 export type Verdict = "no-face" | "multiple-faces" | "match" | "no-match" | "enrol";
 
-/** SecureFin's README: a match is a Euclidean distance below 0.6. */
 export const FACE_THRESHOLD = 0.6;
 
 export function verdict(input: { faces: number; distance: number | null; threshold: number }): Verdict {

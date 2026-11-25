@@ -8,15 +8,12 @@ import { PressWheelCanvas, type WheelSimState } from "./PressWheelCanvas";
 export interface WheelItem {
   slug: string;
   name: string;
-  /** first chip, e.g. SHIPPED */
   tag: string;
-  /** second chip, e.g. FULL STACK */
   lens: string;
-  /** role/collab and year metadata for active card readout */
   role: string;
   year: string;
   href: string;
-  photo: string;
+  photo?: string;
   plate: string;
 }
 
@@ -51,7 +48,6 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   const [active, setActive] = useState(0);
   const [viewMode, setViewMode] = useState<"wheel" | "list">("wheel");
   const reduced = useSyncExternalStore(subscribeReduced, getReducedSnapshot, () => false);
-  // Keep unused subscribe import satisfied or avoid redundant helpers
   void emptySub;
 
   const stage = useRef<HTMLElement>(null);
@@ -142,7 +138,6 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     };
     const hide = () => setHint(false);
 
-    // Only intercept horizontal/shift wheel gestures; vertical wheel must scroll the page normally
     const onWheel = (e: WheelEvent) => {
       const sideways = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
       if (!sideways) return;

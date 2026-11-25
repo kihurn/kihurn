@@ -3,20 +3,20 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LabMiniStage } from "@/components/lab/LabMiniStage";
+import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 import { useScrambleText } from "@/hooks/useScrambleText";
 import { normalizeLabMode, type LabViewMode } from "@/lib/labSchematics";
 
 export interface LabItem {
   slug: string;
   name: string;
-  /** primary lens / engine, e.g. THREE.JS + GLSL or FULL STACK */
   tag: string;
-  /** badge pill, e.g. EXP::01 or SHIPPED */
   pill: string;
   href: string;
   year: string;
   summary: string;
   kind: "experiment" | "project";
+  photo?: string;
 }
 
 const WHEEL_STEP = 0.175;
@@ -62,7 +62,6 @@ export function LabWheel({ items }: { items: LabItem[] }) {
     moved: 0,
   });
 
-  // Hydrate persisted lab-mode in RAF to avoid synchronous setState in effect
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       try {
@@ -111,7 +110,6 @@ export function LabWheel({ items }: { items: LabItem[] }) {
           const lx = 42 - 9.5 * off * off;
           const ly = centerY + off * rowH * 0.96;
           const deg = (angle * 180) / Math.PI;
-          // Fade out before reaching top header bar or bottom mode pill
           const topFade = ly < 116 ? Math.max(0, (ly - 68) / 48) : 1;
           const bottomFade = ly > H - 155 ? Math.max(0, (H - 85 - ly) / 70) : 1;
           const distFade = Math.max(0, 1 - Math.abs(off) * 0.19);
@@ -265,7 +263,6 @@ export function LabWheel({ items }: { items: LabItem[] }) {
         data-lab-mode={mode}
         aria-label="Lab index: experiments and builds"
       >
-        {/* WHEEL MODE: Curved left typography wheel + floating interactive right preview */}
         <div
           ref={viewportRef}
           className="lab__viewport"
@@ -312,7 +309,9 @@ export function LabWheel({ items }: { items: LabItem[] }) {
               <span>{current.tag}</span>
             </div>
             <Link href={current.href} className="lab__preview-stage" aria-label={`Open ${current.name}`}>
-              <LabMiniStage slug={current.slug} interactive={true} />
+              <OptionalPhoto src={current.photo} alt={`${current.name} screenshot`} width={640} height={400} className="project-photo">
+                <LabMiniStage slug={current.slug} />
+              </OptionalPhoto>
             </Link>
             <div className="lab__preview-foot">
               <div className="lab__preview-title-row">
@@ -327,7 +326,6 @@ export function LabWheel({ items }: { items: LabItem[] }) {
           </aside>
         </div>
 
-        {/* GRID MODE: 3-column architectural grid with procedural canvases / schematics */}
         {mode === "grid" ? (
           <div className="lab__grid-wrap" data-lab-grid>
             <div className="lab__grid-head">
@@ -342,7 +340,9 @@ export function LabWheel({ items }: { items: LabItem[] }) {
                     <span>{e.pill}</span>
                   </div>
                   <div className="lab__gcard-media">
-                    <LabMiniStage slug={e.slug} interactive={false} />
+                    <OptionalPhoto src={e.photo} alt={`${e.name} screenshot`} width={640} height={400} className="project-photo">
+                      <LabMiniStage slug={e.slug} interactive={false} />
+                    </OptionalPhoto>
                   </div>
                   <div className="lab__gcard-body">
                     <h2 className="lab__gcard-title text-h5">{e.name}</h2>
@@ -358,7 +358,6 @@ export function LabWheel({ items }: { items: LabItem[] }) {
           </div>
         ) : null}
 
-        {/* LIST MODE: Compact archival index rows */}
         {mode === "list" ? (
           <div className="lab__table-wrap" data-lab-table>
             <div className="lab__table-head text-mono-sm u-muted">
@@ -389,7 +388,6 @@ export function LabWheel({ items }: { items: LabItem[] }) {
           </div>
         ) : null}
 
-        {/* Bottom docked switcher bar: stepper + LIST | WHEEL | GRID */}
         <div className="lab__dock">
           {mode === "wheel" ? (
             <button

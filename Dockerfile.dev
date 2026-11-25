@@ -5,7 +5,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Source files are mounted as a volume at runtime for hot reload
 
 EXPOSE 3000
 

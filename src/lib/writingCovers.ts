@@ -1,8 +1,5 @@
 import type { Article } from "@/content/writing";
 
-/**
- * Pure deterministic cover metadata & excerpt math for WritingShelf 3D book cards.
- */
 export function buildBookCoverSpec(article: Article, index: number) {
   const firstSection = article.sections[0];
   const issueNo = String(index + 1).padStart(2, "0");

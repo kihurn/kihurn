@@ -10,12 +10,10 @@ export interface GraphEdge {
   to: string;
 }
 
-/** status "building" and flagged for the home page, in content order */
 export function getBuilding(ps: Project[]): Project[] {
   return ps.filter((p) => p.status === "building" && p.showOnHome);
 }
 
-/** "YYYY-MM" sorts as text; anything else (TODO, missing) sorts last */
 function doneKey(p: Project): string {
   return p.finishedOn && /^\d{4}-\d{2}/.test(p.finishedOn) ? p.finishedOn : "";
 }
@@ -27,8 +25,8 @@ export function getRecentlyDone(ps: Project[], n = 3): Project[] {
     .sort((a, b) => {
       const ka = doneKey(a.p);
       const kb = doneKey(b.p);
-      if (ka === kb) return a.i - b.i; // stable: content order
-      return ka < kb ? 1 : -1; // newer first, empty last
+      if (ka === kb) return a.i - b.i;
+      return ka < kb ? 1 : -1;
     })
     .map((x) => x.p)
     .slice(0, n);
@@ -44,11 +42,6 @@ export function filterByLens(ps: Project[], lens: Lens | "all"): Project[] {
 
 export const SITE_CHAT: GraphNode = { slug: "site-chat", name: "This site's chat", live: true };
 
-/**
- * Map data for the Lab. Nodes: every ecosystem project (live), in-progress
- * (building/paused) projects outside the ecosystem (greyed), and this site's chat.
- * Edges come from `uses`, only where the target is a node, plus site-chat -> c0re.
- */
 export function getEcosystemGraph(ps: Project[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   for (const p of ps) {
@@ -67,7 +60,6 @@ export function getEcosystemGraph(ps: Project[]): { nodes: GraphNode[]; edges: G
   return { nodes, edges };
 }
 
-/** Repos whose public activity may appear on Home. The profile repo is never listed. */
 export function getActivityRepos(ps: Project[]): string[] {
   return ps
     .filter((p) => (p.showOnHome || p.ecosystem) && p.repo && p.repo !== "kihurn/kihurn")
@@ -81,7 +73,6 @@ export const LENS_LABEL: Record<Lens, string> = {
   security: "SECURITY",
 };
 
-/** Featured work leads the wheels; the rest follow in content order. */
 export function wheelOrder(ps: Project[]): Project[] {
   return [...ps.filter((p) => p.featured), ...ps.filter((p) => !p.featured)];
 }

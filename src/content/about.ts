@@ -1,4 +1,3 @@
-// About-page content. Facts only, from the original brief (section 4).
 
 export interface TimelineEntry {
   kind: "Education" | "Work" | "Training" | "Community";
@@ -64,7 +63,6 @@ export interface SkillGroup {
   items: string[];
 }
 
-// Only technologies that appear in the brief or a project README.
 export const skillGroups: SkillGroup[] = [
   { heading: "Languages", items: ["TypeScript", "Python", "Rust"] },
   { heading: "Web", items: ["React", "Vite", "Tailwind CSS", "Vercel"] },

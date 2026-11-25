@@ -25,7 +25,6 @@ test("the five nav links resolve", async ({ page }) => {
 test("command palette opens as a dialog", async ({ page, isMobile }) => {
   await page.goto("/");
   await expect(page.locator("[data-cmd-open]").first()).toBeAttached();
-  // let the client script attach its listeners
   await page.waitForFunction(() => document.querySelector("[data-roll][data-rolled]") !== null);
   if (isMobile) {
     await page.getByRole("button", { name: "Search" }).click();
@@ -84,7 +83,6 @@ test("nav pill sits exactly on the current page's link", async ({ page, isMobile
     await page.goto(path);
     await page.evaluate(() => document.fonts.ready);
     const link = page.locator(".navpill__link", { hasText: label });
-    // wait out the 0.4s slide
     await expect
       .poll(async () => {
         const [p, l] = await Promise.all([

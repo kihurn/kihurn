@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { computeScrambledFrame, DEFAULT_SCRAMBLE_GLYPHS } from "@/lib/scramble";
 
 export interface UseScrambleTextOptions {
@@ -21,11 +21,10 @@ export function useScrambleText(
     animateOnMount = false,
   } = options;
 
-  const [displayText, setDisplayText] = useState(targetText);
-  const [isScrambling, setIsScrambling] = useState(false);
+  const [frame, setFrame] = useState({ target: targetText, text: targetText, running: false });
   const firstRunRef = useRef(true);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const reduced =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -33,43 +32,38 @@ export function useScrambleText(
     const skip = reduced || (firstRunRef.current && !animateOnMount);
     firstRunRef.current = false;
 
-    let raf = 0;
-    if (skip) {
-      raf = requestAnimationFrame(() => {
-        setDisplayText(targetText);
-        setIsScrambling(false);
-      });
-      return () => cancelAnimationFrame(raf);
-    }
+    if (skip) return;
 
     const start = performance.now();
+    let raf = 0;
+    let cancelled = false;
     let lastTick = -1;
 
     const step = (now: number) => {
+      if (cancelled) return;
       const elapsed = now - start;
       const progress = Math.min(1, elapsed / Math.max(1, durationMs));
       const tick = Math.floor(elapsed / Math.max(16, intervalMs));
 
-      if (tick === 0 && lastTick === -1) {
-        setIsScrambling(true);
-      }
-
       if (tick !== lastTick || progress >= 1) {
         lastTick = tick;
-        setDisplayText(computeScrambledFrame(targetText, progress, tick, glyphs));
+        const text = progress < 1 ? computeScrambledFrame(targetText, progress, tick, glyphs) : targetText;
+        setFrame({ target: targetText, text, running: progress < 1 });
       }
 
       if (progress < 1) {
         raf = requestAnimationFrame(step);
-      } else {
-        setDisplayText(targetText);
-        setIsScrambling(false);
       }
     };
 
     raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [targetText, durationMs, intervalMs, glyphs, animateOnMount]);
 
-  return { displayText, isScrambling };
+  return frame.target === targetText
+    ? { displayText: frame.text, isScrambling: frame.running }
+    : { displayText: targetText, isScrambling: false };
 }

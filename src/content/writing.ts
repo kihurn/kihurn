@@ -11,7 +11,7 @@ export interface Article {
   slug: string;
   title: string;
   summary: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   year: "2026" | "2025";
   readTime: string;
   tags: WritingTag[];

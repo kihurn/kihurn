@@ -1,10 +1,5 @@
 export const DEFAULT_SCRAMBLE_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/+#%&*:";
 
-/**
- * Computes a deterministic single frame of a left-to-right text decode/scramble.
- * Characters up to the resolved threshold render their target glyph; whitespace
- * is always preserved so layout width stays stable.
- */
 export function computeScrambledFrame(
   target: string,
   progress: number,

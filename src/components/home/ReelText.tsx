@@ -21,11 +21,6 @@ function makeSlot(ch: string): Slot {
   return { el, a, b, cur: ch };
 }
 
-/**
- * One line of the home carousel's center readout. When `text` changes every
- * character spins through a few random glyphs (a slot-machine reel, left to
- * right) before landing on the new character. Reduced motion swaps instantly.
- */
 export function ReelText({
   text,
   className,
@@ -49,7 +44,6 @@ export function ReelText({
     const chars = [...text];
     cancelAnimationFrame(raf.current);
 
-    // grow / shrink the slot list to match the new string
     const list = slots.current;
     while (list.length < chars.length) {
       const s = makeSlot(" ");
@@ -70,7 +64,6 @@ export function ReelText({
       return;
     }
 
-    // per-slot timeline
     type Plan = { slot: Slot; seq: string[]; start: number; turn: number };
     const t0 = performance.now() + delay;
     const plans: Plan[] = list.map((slot, i) => {
@@ -81,7 +74,6 @@ export function ReelText({
       seq.push(target);
       return { slot, seq, start: t0 + i * 32, turn: 150 };
     });
-    // slots that are leaving spin to a blank and are removed at the end
     const leaving: Plan[] = extra.map((slot, i) => ({
       slot,
       seq: [slot.cur, " "],
@@ -115,7 +107,6 @@ export function ReelText({
         p.slot.b.textContent = nb(to);
         p.slot.el.style.setProperty("--r", ease(local).toFixed(4));
         if (k === p.seq.length - 2) {
-          // last turn also glides the slot width to the landing glyph
           const w0 = widthFrom.get(p.slot) ?? 0;
           const w1 = measure(p.slot, to);
           p.slot.el.style.width = `${w0 + (w1 - w0) * ease(local)}px`;

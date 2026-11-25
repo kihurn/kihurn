@@ -2,10 +2,6 @@ import type { FaqEntry } from "@/content/types";
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/**
- * Case-insensitive, whole-word keyword match. Returns the entry with the most
- * keyword hits; a tie goes to the earlier entry; no hit returns null.
- */
 export function matchFaq(text: string, entries: FaqEntry[]): FaqEntry | null {
   const input = text.trim();
   if (!input) return null;

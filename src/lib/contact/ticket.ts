@@ -1,6 +1,5 @@
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-/** "KH-YYMMDD-XXXX", the date in Kuala Lumpur time. */
 export function makeTicketNumber(now: Date, rand: () => number = Math.random): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Kuala_Lumpur",

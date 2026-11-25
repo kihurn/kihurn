@@ -69,14 +69,19 @@ test.describe("Gigs", () => {
     for (const v of d) expect(v.split(",").every((x) => parseFloat(x) === 0)).toBe(true);
   });
 
-  test("four event cards, and Circus Funtasia is a visible TODO", async ({ page }) => {
+  test("four event cards use finished copy and a two-column desktop grid", async ({ page, isMobile }) => {
     await page.goto("/gigs");
     const cards = page.locator("[data-event]");
     await expect(cards).toHaveCount(4);
     await expect(cards.filter({ hasText: "WNBF Malaysia 2025" })).toHaveCount(1);
     await expect(cards.filter({ hasText: "Orientation Party 2026" })).toHaveCount(1);
     await expect(cards.filter({ hasText: "Law Ball 2025" })).toHaveCount(1);
-    await expect(cards.filter({ hasText: "Circus Funtasia" })).toContainText("TODO:");
+    await expect(cards.filter({ hasText: "Circus Funtasia" })).toContainText("Event Crew & Production");
+    await expect(page.locator(".events")).not.toContainText("TODO:");
+    const columns = await page.locator(".events").evaluate((element) =>
+      getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    );
+    expect(columns).toBe(isMobile ? 1 : 2);
   });
 
   test("the scrapbook link goes to the book site", async ({ page }) => {

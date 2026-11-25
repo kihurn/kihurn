@@ -1,4 +1,3 @@
-// Gigs-page content. Facts only, from the original brief (section 4).
 
 export const crewRoles = [
   "Internal usher",
@@ -27,8 +26,8 @@ export const events: GigEvent[] = [
   {
     slug: "circus-funtasia",
     name: "Circus Funtasia",
-    role: "TODO: role",
-    detail: "TODO: details",
+    role: "Event Crew & Production",
+    detail: "",
   },
   {
     slug: "orientation-party-2026",

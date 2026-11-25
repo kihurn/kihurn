@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { Project } from "@/content/types";
 import { LabMiniStage } from "./LabMiniStage";
+import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 
-/** Ordered steps drawn as boxes joined by arrows. Reads top to bottom on a phone. */
 export function Flow({ steps, label }: { steps: string[]; label: string }) {
   return (
     <ol className="flow" aria-label={label}>
@@ -16,7 +16,6 @@ export function Flow({ steps, label }: { steps: string[]; label: string }) {
   );
 }
 
-/** How a chat message reaches Ki Hurn's PC, step by step. */
 export function ChatPath() {
   const steps = [
     "Browser: you type a question",
@@ -52,17 +51,19 @@ export function BookCard() {
   );
 }
 
-/** Procedural monochrome architecture diagram replacing TODO screenshot placeholders. Internal work adds a classified overlay bar. */
 export function ShotSlot({
   internal,
   slug = "c0re",
   name = "Architecture schematic",
+  photo,
 }: {
   internal: boolean;
   slug?: string;
   name?: string;
+  photo?: string;
 }) {
   return (
+    <OptionalPhoto src={internal ? undefined : photo} alt={`${name} screenshot`} width={640} height={400} className="project-photo shot">
     <div
       className={`shot${internal ? " shot--blur" : ""}`}
       role="img"
@@ -73,6 +74,7 @@ export function ShotSlot({
         {internal ? "TOPOLOGY::REDACTED // INTERNAL" : `SCHEMATIC::${slug.toUpperCase()}`}
       </span>
     </div>
+    </OptionalPhoto>
   );
 }
 

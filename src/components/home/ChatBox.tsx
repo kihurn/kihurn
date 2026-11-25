@@ -14,7 +14,6 @@ interface Msg {
 
 const ERR = "Something went wrong. Try a suggested question, or send me a ticket.";
 
-/** Chips answer instantly from the script (works offline); typed questions go to /api/chat. */
 export function ChatBox({ chips }: { chips: FaqEntry[] }) {
   const [log, setLog] = useState<Msg[]>([]);
   const [value, setValue] = useState("");

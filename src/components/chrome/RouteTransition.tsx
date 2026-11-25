@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { computeTornWipeOffsets, generateTornEdgePoints } from "@/lib/tornPaper";
 
@@ -10,22 +10,19 @@ export function dispatchTornNavigate(href: string) {
   window.dispatchEvent(new CustomEvent<{ href: string }>(NAVIGATE_EVENT, { detail: { href } }));
 }
 
-/**
- * Full-viewport Canvas torn-paper wipe that sweeps bottom -> top on route change
- * with an organic deckled edge, clean RAF lifecycle, and reduced-motion bypass.
- */
 export function RouteTransition() {
   const router = useRouter();
   const pathname = usePathname();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pathCommittedRef = useRef<(() => void) | null>(null);
+  const pendingRef = useRef<{ path: string; reveal: () => void; scroll: boolean } | null>(null);
   const activeRafRef = useRef(0);
   const safetyTimerRef = useRef(0);
-  const busyRef = useRef(false);
-
-  useEffect(() => {
-    pathCommittedRef.current?.();
-    pathCommittedRef.current = null;
+  useLayoutEffect(() => {
+    const pending = pendingRef.current;
+    if (!pending || pending.path !== pathname) return;
+    pendingRef.current = null;
+    if (pending.scroll) window.scrollTo({ top: 0, behavior: "instant" });
+    pending.reveal();
   }, [pathname]);
 
   useEffect(() => {
@@ -61,8 +58,8 @@ export function RouteTransition() {
       }
 
       const isLight = document.documentElement.dataset.theme === "light";
-      const sheetColor = isLight ? "#1e1e1e" : "#d6d6d5";
-      const deckleEdgeColor = isLight ? "rgba(214,214,213,0.45)" : "rgba(30,30,30,0.45)";
+      const sheetColor = isLight ? "#d6d6d5" : "#1e1e1e";
+      const deckleEdgeColor = isLight ? "rgba(30,30,30,0.28)" : "rgba(214,214,213,0.32)";
       const { topEdgeY, bottomEdgeY } = computeTornWipeOffsets(progress, h, 44);
 
       const topPts = generateTornEdgePoints(w, topEdgeY, seed, 24, 48);
@@ -81,7 +78,6 @@ export function RouteTransition() {
       ctx.fillStyle = sheetColor;
       ctx.fill();
 
-      // Crisp deckle fiber highlight along leading and trailing torn edges
       ctx.strokeStyle = deckleEdgeColor;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -98,24 +94,25 @@ export function RouteTransition() {
     };
 
     const runTransition = (href: string) => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const target = new URL(href, window.location.href);
+      if (target.origin !== window.location.origin) return;
+      if (pendingRef.current && canvas.classList.contains("is-active")) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || target.pathname === window.location.pathname) {
+        pendingRef.current = null;
+        if (!target.hash) window.scrollTo({ top: 0, behavior: "instant" });
         router.push(href);
         return;
       }
 
-      const targetPath = href.split(/[?#]/)[0];
-      if (targetPath === window.location.pathname && !href.includes("#")) {
-        return;
-      }
-
+      pendingRef.current = null;
       cancelAnimationFrame(activeRafRef.current);
       window.clearTimeout(safetyTimerRef.current);
-      busyRef.current = true;
       canvas.classList.add("is-active");
+      router.prefetch(href);
       const seed = (performance.now() % 100) * 0.13 + 1.2;
 
-      const coverDur = 290;
-      const revealDur = 340;
+      const coverDur = 205;
+      const revealDur = 235;
       const t0 = performance.now();
 
       const animateReveal = () => {
@@ -128,7 +125,6 @@ export function RouteTransition() {
           } else {
             drawTornBand(1, seed);
             canvas.classList.remove("is-active");
-            busyRef.current = false;
           }
         };
         activeRafRef.current = requestAnimationFrame(stepReveal);
@@ -145,11 +141,12 @@ export function RouteTransition() {
             if (startedReveal) return;
             startedReveal = true;
             window.clearTimeout(safetyTimerRef.current);
-            requestAnimationFrame(animateReveal);
+            animateReveal();
           };
-          pathCommittedRef.current = finishRoute;
-          safetyTimerRef.current = window.setTimeout(finishRoute, 520);
-          router.push(href);
+          pendingRef.current = { path: target.pathname, reveal: finishRoute, scroll: !target.hash };
+          if (!target.hash) window.scrollTo({ top: 0, behavior: "instant" });
+          safetyTimerRef.current = window.setTimeout(finishRoute, 260);
+          router.push(href, { scroll: Boolean(target.hash) });
         }
       };
 
@@ -167,8 +164,7 @@ export function RouteTransition() {
       window.removeEventListener(NAVIGATE_EVENT, onNavigate);
       cancelAnimationFrame(activeRafRef.current);
       window.clearTimeout(safetyTimerRef.current);
-      pathCommittedRef.current = null;
-      busyRef.current = false;
+      pendingRef.current = null;
     };
   }, [router]);
 

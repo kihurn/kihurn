@@ -4,6 +4,9 @@ import "../../styles/lab.css";
 import "../../styles/pages.css";
 import { CrewPass } from "@/components/gigs/CrewPass";
 import { events } from "@/content/gigs";
+import { media } from "@/data/media";
+import { availableMedia } from "@/lib/server/media";
+import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 
 export const metadata: Metadata = {
   title: "Gigs",
@@ -32,14 +35,15 @@ export default function GigsPage() {
         <ul className="events">
           {events.map((e) => (
             <li key={e.slug} className="event" data-event>
-              <Image
+              <OptionalPhoto
                 className="event__photo"
-                src="/placeholder/event.svg"
+                src={availableMedia(media.gigs[e.slug])}
                 width={640}
                 height={400}
-                alt={`TODO: photo from ${e.name}`}
-                unoptimized
-              />
+                alt={e.name}
+              >
+                <Image className="event__photo" src="/placeholder/event.svg" width={640} height={400} alt="" unoptimized />
+              </OptionalPhoto>
               <h3 className="event__name text-display">{e.name}</h3>
               <p className="event__role text-body">{e.role}</p>
               {e.detail ? <p className="event__detail text-body">{e.detail}</p> : null}

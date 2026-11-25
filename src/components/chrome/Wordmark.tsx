@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import { getMonogramPrefix } from "@/lib/chrome";
 
-/** Route-aware archival prefix monogram (e.g., KH::, About::, Lab::). */
 export function Wordmark({ short = false }: { short?: boolean }) {
   const pathname = usePathname() || "/";
   const prefix = short ? "KH" : getMonogramPrefix(pathname);

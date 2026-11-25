@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useState } from "react";
+import Image from "next/image";
 import { TICKET_TYPES, type TicketType } from "@/lib/contact/validate";
 
 export type StubStatus = "writing" | "queued";
@@ -16,7 +17,6 @@ interface Props {
   status: StubStatus;
 }
 
-/** The perforated INTAKE · COUNTER 01 ticket stub synced live as the visitor drafts. */
 export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
   { ticketNo, date, type, name, email, message, signature, status },
   ref,
@@ -42,8 +42,8 @@ export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
       </div>
 
       <div className="stub__no-row">
-        <p className="stub__no text-mono-meta" data-stub-no>
-          {ticketNo ?? "KH-YYMMDD-····"}
+        <p className="stub__no text-mono-meta">
+          <span aria-hidden="true">JOB :: </span><span data-stub-no>{ticketNo ?? "KH-YYMMDD-····"}</span>
         </p>
         {ticketNo ? (
           <button type="button" className="stub__copy text-mono-sm" onClick={copyId} aria-label="Copy receipt ID">
@@ -82,13 +82,15 @@ export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
       <div className="stub__sig">
         <span className="stub__sig-k text-mono-sm">SIGNATURE::</span>
         {signature ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={signature} alt="Visitor signature" className="stub__sig-img" />
+          <Image unoptimized src={signature} width={320} height={128} alt="Visitor signature" className="stub__sig-img" />
         ) : (
           <span className="stub__sig-empty text-mono-sm">UNSIGNED</span>
         )}
       </div>
 
+      <div className="stub__barcode" aria-hidden="true">
+        {Array.from({ length: 40 }, (_, index) => <i key={index} style={{ width: 1 + (index * 7 % 5) * 0.6 }} />)}
+      </div>
       <p className="stub__foot text-mono-meta">ONE REPLY · MYT +08:00 · NO SPAM</p>
     </div>
   );

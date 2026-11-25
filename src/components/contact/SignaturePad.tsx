@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import NextImage from "next/image";
 
 interface SignaturePadProps {
   value: string;
@@ -13,10 +14,13 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
   const dialogRef = useRef<HTMLDialogElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
+  const pointerRef = useRef<number | null>(null);
+  const pathRef = useRef("");
   const hasInkRef = useRef(Boolean(value));
   const lastPtRef = useRef<{ x: number; y: number } | null>(null);
   const [open, setOpen] = useState(false);
   const [hasInk, setHasInk] = useState(Boolean(value));
+  const [inkPath, setInkPath] = useState("");
 
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -60,11 +64,13 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
 
   const getLocalPoint = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+    return { x, y, svg: `${Math.round(1000 * x / rect.width)} ${Math.round(400 * y / rect.height)}` };
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (disabled) return;
+    if (disabled || pointerRef.current !== null || e.button !== 0) return;
     setupCanvas();
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -72,18 +78,13 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
 
     const pt = getLocalPoint(e);
     drawingRef.current = true;
+    pointerRef.current = e.pointerId;
     lastPtRef.current = pt;
     hasInkRef.current = true;
     setHasInk(true);
 
-    const stopGlobal = () => {
-      drawingRef.current = false;
-      lastPtRef.current = null;
-      window.removeEventListener("pointerup", stopGlobal);
-      window.removeEventListener("pointercancel", stopGlobal);
-    };
-    window.addEventListener("pointerup", stopGlobal);
-    window.addEventListener("pointercancel", stopGlobal);
+    canvas.setPointerCapture(e.pointerId);
+    pathRef.current += `M${pt.svg} l.1 0`;
 
     ctx.strokeStyle = "#1e1e1e";
     ctx.lineWidth = e.pointerType === "pen" && e.pressure > 0 ? 1.5 + e.pressure * 1.6 : 2.2;
@@ -94,7 +95,7 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current || disabled) return;
+    if (!drawingRef.current || disabled || pointerRef.current !== e.pointerId) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     const prev = lastPtRef.current;
@@ -107,11 +108,13 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     ctx.moveTo(prev.x, prev.y);
     ctx.lineTo(pt.x, pt.y);
     ctx.stroke();
+    pathRef.current += ` L${pt.svg}`;
     lastPtRef.current = pt;
   };
 
-  const endStroke = () => {
-    if (!drawingRef.current) return;
+  const endStroke = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (pointerRef.current !== event.pointerId) return;
+    pointerRef.current = null;
     drawingRef.current = false;
     lastPtRef.current = null;
   };
@@ -126,6 +129,8 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
       ctx.restore();
     }
     hasInkRef.current = false;
+    pathRef.current = "";
+    setInkPath("");
     setHasInk(false);
     onChange("");
   };
@@ -135,6 +140,7 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     if (canvas && hasInkRef.current) {
       try {
         onChange(canvas.toDataURL("image/png"));
+        setInkPath(pathRef.current);
       } catch {}
     } else {
       onChange("");
@@ -145,7 +151,6 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
   return (
     <div className="sigline">
       <div className="sigline__head">
-        <span className="text-label">Sign off</span>
         <span className="text-mono-sm sigline__status" aria-live="polite">
           {value ? "SIG::CAPTURED" : "SIG::OPTIONAL"}
         </span>
@@ -154,8 +159,13 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
       <div className="sigline__row">
         {value ? (
           <div className="sigline__preview">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={value} alt="Your captured signature" className="sigline__img" />
+            {inkPath ? (
+              <svg className="sigline__img" viewBox="0 0 1000 400" role="img" aria-label="Your captured signature">
+                <path d={inkPath} fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <NextImage unoptimized src={value} width={320} height={128} alt="Your captured signature" className="sigline__img" />
+            )}
           </div>
         ) : (
           <button
@@ -231,6 +241,7 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
               onPointerMove={handlePointerMove}
               onPointerUp={endStroke}
               onPointerCancel={endStroke}
+              onLostPointerCapture={endStroke}
             />
             {!hasInk ? (
               <span className="sigmodal__hint text-mono-sm" aria-hidden="true">

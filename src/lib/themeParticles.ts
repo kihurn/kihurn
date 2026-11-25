@@ -10,7 +10,6 @@ export interface ThemeParticle {
   accent: boolean;
 }
 
-/** Generate deterministic radial monochrome particles radiating from the theme switch button. */
 export function createThemeBurstParticles(
   originX: number,
   originY: number,
@@ -36,7 +35,6 @@ export function createThemeBurstParticles(
   });
 }
 
-/** Advance particle physics one step with air drag and alpha fade. */
 export function stepThemeBurstParticles(particles: ThemeParticle[]): ThemeParticle[] {
   const active: ThemeParticle[] = [];
   for (let i = 0; i < particles.length; i++) {

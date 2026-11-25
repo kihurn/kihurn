@@ -1,16 +1,12 @@
-/* Home: status page. Uses the reference's tokens (--ink, --paper, --line, --s-*, --margin). */
 
 .home{display:flex;flex-direction:column}
 .home__rest{padding:var(--s-80) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;inline-size:100%;display:flex;flex-direction:column;gap:var(--s-80)}
-/* touch: sideways swipes turn the wheel, vertical swipes still scroll the page */
 .hv2__stage{touch-action:pan-y pinch-zoom}
 
-/* hero */
 .hero{display:flex;flex-direction:column;gap:var(--s-16)}
 .hero__name{margin:0}
 .hero__tag{max-inline-size:40rem;color:var(--ink);opacity:.8;margin:0}
 
-/* chat */
 .chat{display:flex;flex-direction:column;gap:var(--s-14);max-inline-size:40rem;margin-block-start:var(--s-16)}
 .chat__form{display:flex;align-items:center;gap:var(--s-8);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 5%,var(--paper));padding:var(--s-6) var(--s-6) var(--s-6) var(--s-16)}
 .chat__form:focus-within{outline:2px solid var(--ink);outline-offset:2px}
@@ -31,17 +27,14 @@
 .chat__who{display:block;opacity:.6;margin-block-end:var(--s-4)}
 .chat__tag{display:inline-block;margin-inline-start:var(--s-8);opacity:.6;border:1px solid var(--line);border-radius:99px;padding:0 var(--s-6)}
 
-/* section scaffolding */
 .hs{display:flex;flex-direction:column;gap:var(--s-16)}
 .hs__title{margin:0;opacity:.7}
 
-/* now */
 .now{list-style:none;margin:0;padding:0;border-block-start:1px solid var(--line)}
 .now__row{display:grid;grid-template-columns:7rem 1fr auto;gap:var(--s-16);align-items:baseline;padding:var(--s-14) 0;border-block-end:1px solid var(--line)}
 .now__since{opacity:.6}
 @media (width<=47.99rem){.now__row{grid-template-columns:5.5rem 1fr}.now__since{grid-column:2}}
 
-/* project cards */
 .pcards{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-16);grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
 .pcard{display:flex;flex-direction:column;gap:var(--s-10);padding:var(--s-18);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
 .pcard__meta{display:flex;flex-wrap:wrap;gap:var(--s-6);min-block-size:1.5rem}
@@ -50,12 +43,10 @@
 .pcard__name a:hover,.pcard__name a:focus-visible{text-decoration:underline}
 .pcard__summary{margin:0;opacity:.8;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 
-/* halftone image: the canvas lays a dot-screen over the pointer's wake */
 .halftone{position:relative;display:block;line-height:0}
 .halftone__img{inline-size:100%;block-size:100%;object-fit:cover;display:block;user-select:none}
 .halftone__canvas{position:absolute;inset:0;inline-size:100%;block-size:100%;pointer-events:none}
 
-/* recent activity */
 .activity{list-style:none;margin:0;padding:0;border-block-start:1px solid var(--line)}
 .activity__row{display:flex;justify-content:space-between;gap:var(--s-16);padding:var(--s-12) 0;border-block-end:1px solid var(--line)}
 .activity__row a{color:inherit;text-decoration:none}
@@ -63,13 +54,11 @@
 .activity__when{opacity:.6;white-space:nowrap}
 .activity__repo{opacity:.7}
 
-/* calls to action */
 .cta{display:flex;flex-wrap:wrap;gap:var(--s-16) var(--s-32);padding-block:var(--s-24);border-block-start:1px solid var(--line)}
 .cta__link{color:inherit;text-decoration:none;font-size:var(--fs-500,1.5rem)}
 .cta__link:hover,.cta__link:focus-visible{text-decoration:underline}
 
 
-/* wheel over the stage must still reach the page; controls stay strictly inside 100svh stage */
 .hv2{position:relative;isolation:isolate}
 .hv2__stage{overscroll-behavior:auto;position:relative;height:100svh;min-height:36rem;overflow:clip;isolation:isolate}
 .hv2__glcanvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}

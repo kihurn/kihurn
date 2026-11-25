@@ -5,7 +5,7 @@ import { TICKET_TYPES, type TicketType } from "@/lib/contact/validate";
 import { SignaturePad } from "./SignaturePad";
 import { TicketStub } from "./TicketStub";
 
-type Errors = Partial<Record<"type" | "name" | "email" | "message" | "form", string>>;
+type Errors = Partial<Record<"type" | "name" | "email" | "message" | "referral" | "form", string>>;
 
 const emptySubscribe = () => () => {};
 function getKlDate() {
@@ -24,6 +24,7 @@ export function TicketForm({ email }: { email: string }) {
   const [name, setName] = useState("");
   const [mail, setMail] = useState("");
   const [message, setMessage] = useState("");
+  const [referral, setReferral] = useState("");
   const [signature, setSignature] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
@@ -35,6 +36,7 @@ export function TicketForm({ email }: { email: string }) {
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
+  const referralRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,14 +48,14 @@ export function TicketForm({ email }: { email: string }) {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, name, email: mail, message, signature: signature || undefined, website }),
+        body: JSON.stringify({ type, name, email: mail, message, referral, signature: signature || undefined, website }),
       });
       const j = (await res.json().catch(() => ({}))) as { ticketNo?: string; field?: string; error?: string };
       if (res.ok && j.ticketNo) {
         setTicketNo(j.ticketNo);
-      } else if (j.field === "name" || j.field === "email" || j.field === "message") {
+      } else if (j.field === "name" || j.field === "email" || j.field === "message" || j.field === "referral") {
         setErrors({ [j.field]: j.error } as Errors);
-        const focusTarget = j.field === "name" ? nameRef.current : j.field === "email" ? emailRef.current : messageRef.current;
+        const focusTarget = { name: nameRef, email: emailRef, message: messageRef, referral: referralRef }[j.field].current;
         focusTarget?.focus();
       } else {
         setErrors({ form: j.error ?? `Couldn't send right now. Email me directly at ${email}.` });
@@ -96,7 +98,7 @@ export function TicketForm({ email }: { email: string }) {
             {TICKET_TYPES.map((t) => (
               <label key={t.id} className="ticket__radio text-body">
                 <input type="radio" name="type" value={t.id} checked={type === t.id} onChange={() => setType(t.id)} />
-                <span>{t.label}</span>
+                <span><span className="ticket__check" aria-hidden="true">{type === t.id ? "[x]" : "[ ]"}</span> {t.label}</span>
               </label>
             ))}
           </div>
@@ -104,7 +106,7 @@ export function TicketForm({ email }: { email: string }) {
 
         <div className="letter-sheet__row">
           <label className="ticket__field">
-            <span className="text-label">Your name</span>
+            <span className="text-label">FROM :: Your name</span>
             <input
               ref={nameRef}
               name="name"
@@ -147,10 +149,20 @@ export function TicketForm({ email }: { email: string }) {
         </div>
 
         <label className="ticket__field">
-          <span className="text-label">Message</span>
+          <span className="text-label">VIA :: Referral (optional)</span>
+          <input ref={referralRef} name="referral" value={referral} maxLength={160} disabled={sent}
+            onChange={(event) => setReferral(event.target.value)} aria-invalid={Boolean(errors.referral)}
+            aria-describedby={errors.referral ? "err-referral" : undefined}
+          />
+          {errors.referral ? <span id="err-referral" className="ticket__err" role="alert">{errors.referral}</span> : null}
+        </label>
+
+        <label className="ticket__field">
+          <span className="text-label">What are we making?</span>
           <textarea
             ref={messageRef}
             name="message"
+            aria-label="Message"
             rows={6}
             placeholder="Write a note, timeline, or link…"
             value={message}
@@ -167,9 +179,12 @@ export function TicketForm({ email }: { email: string }) {
           ) : null}
         </label>
 
-        <SignaturePad value={signature} onChange={setSignature} disabled={sent} />
+        <div className="letter-sheet__signoff">
+          <p>Sincerely,</p>
+          <SignaturePad value={signature} onChange={setSignature} disabled={sent} />
+          <p>{name.trim() || "Your name"}</p>
+        </div>
 
-        {/* honeypot: hidden from people and screen readers, bots fill it */}
         <input className="ticket__hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" defaultValue="" />
 
         {errors.form ? (
@@ -183,8 +198,8 @@ export function TicketForm({ email }: { email: string }) {
             Ticket {ticketNo} is in the queue. I&apos;ll reply to {mail}.
           </p>
         ) : (
-          <button className="btn btn--solid text-tag ticket__submit" type="submit" disabled={busy}>
-            {busy ? "Sending…" : "Send ticket"}
+          <button className="btn text-tag ticket__submit" type="submit" disabled={busy}>
+            {busy ? "Sending…" : "Send it"}
           </button>
         )}
       </form>

@@ -1,6 +1,5 @@
 import { defineConfig } from "@playwright/test";
 
-// 3200, not 3000: another local dev server often owns 3000
 const PORT = 3200;
 const STUB_PORT = 3201;
 const MOCK_PORT = 7081;
@@ -14,7 +13,6 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // always answers 500, so Home must hide its activity section and still render
       command: "node tests/e2e/github-stub.mjs",
       port: STUB_PORT,
       reuseExistingServer: false,

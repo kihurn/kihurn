@@ -63,7 +63,7 @@ export function CommandPalette({ projects }: { projects: PaletteProject[] }) {
               <div className="cmd__group" data-cmd-group>
                 <p className="cmd__heading text-label">Pages</p>
                 {PALETTE_PAGES.map((n) => (
-                  <Item key={n.href} label={n.label} hint={n.href} href={n.href} value={`page ${n.label} ${n.href}`} />
+                  <Item key={n.href} label={n.label} hint={n.href === "/gigs" ? "KHGigs :: /gigs" : n.href} href={n.href} value={`page ${n.label} ${n.href}${n.href === "/gigs" ? " KHGigs" : ""}`} />
                 ))}
               </div>
               {projects.length > 0 ? (

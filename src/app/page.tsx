@@ -18,6 +18,8 @@ import {
   wheelOrder,
 } from "@/lib/projects";
 import { getActivity } from "@/lib/server/github";
+import { media } from "@/data/media";
+import { availableMedia } from "@/lib/server/media";
 
 export const revalidate = 3600;
 
@@ -31,7 +33,7 @@ function wheelItems(ps: Project[]): WheelItem[] {
     role: p.teamPart ? "LEAD / TEAM" : "SOLO BUILD",
     year: p.finishedOn && /^\d{4}/.test(p.finishedOn) ? p.finishedOn.slice(0, 4) : "2026",
     href: projectHref(p),
-    photo: `/placeholder/shot-${p.slug}.svg`,
+    photo: p.status === "internal" ? undefined : availableMedia(media.projects[p.slug]),
     plate: `/placeholder/plate-${p.slug}.svg`,
   }));
 }

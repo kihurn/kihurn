@@ -4,7 +4,6 @@ import { projects } from "../../src/content/projects";
 
 const N = projects.length;
 const hydrated = (page: Page) => page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
-/** the wheel's screen-reader line, e.g. "Elysium, 1 of 8" */
 const position = (page: Page) => page.locator("[data-wheels] [aria-live]");
 
 test("hero: h1, labelled chat input and three chips", async ({ page }) => {
@@ -35,7 +34,6 @@ test("project wheel: opens on the first project, turns with the arrow keys or a 
   await expect(position(page)).toHaveText(new RegExp(`1 of ${N}$`));
 
   if (isMobile) {
-    // a real sideways touch drag across the stage
     const box = (await stage.boundingBox())!;
     const cdp = await page.context().newCDPSession(page);
     const y = box.y + box.height / 2;
@@ -66,10 +64,8 @@ test("the page does not scroll-jack the wheel", async ({ page }) => {
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   const before = await page.evaluate(() => window.scrollY);
   await page.mouse.wheel(0, 200);
-  // a plain vertical wheel scrolls the page by the wheel's amount
   await expect.poll(async () => (await page.evaluate(() => window.scrollY)) - before).toBeGreaterThanOrEqual(150);
   await expect.poll(async () => (await page.evaluate(() => window.scrollY)) - before).toBeLessThanOrEqual(260);
-  // and the wheel itself did not turn
   await expect(position(page)).toHaveText(new RegExp(`1 of ${N}$`));
 });
 

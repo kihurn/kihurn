@@ -58,7 +58,6 @@ export function ExperimentWorkbench({
     soundClickRef.current = soundClick;
   }, [soundClick]);
 
-  // Optional microphone input for vocal-orb
   useEffect(() => {
     if (spec.slug !== "vocal-orb" || !micActive) {
       audioLevelRef.current = 0;
@@ -111,13 +110,13 @@ export function ExperimentWorkbench({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (spec.slug === "vocal-orb" || spec.slug === "paper-poster") {
-      // Three.js WebGL stage
       const canvas = document.createElement("canvas");
       canvas.className = "workbench__canvas";
       host.innerHTML = "";
       host.appendChild(canvas);
 
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+      renderer.setClearColor(0, 0);
       const software = detectSoftwareGl(renderer.getContext());
       const maxDpr = software ? 1 : Math.min(window.devicePixelRatio || 1, 2);
       renderer.setPixelRatio(maxDpr);
@@ -189,7 +188,6 @@ export function ExperimentWorkbench({
         mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
       } else {
-        // paper-poster
         geometry = new THREE.PlaneGeometry(1.55, 2.05, software ? 20 : 34, software ? 26 : 44);
         material = new THREE.ShaderMaterial({
           uniforms: {
@@ -488,7 +486,6 @@ export function ExperimentWorkbench({
       };
     }
 
-    // rotary-detent (Canvas 2D precision mechanical dial)
     const canvas = document.createElement("canvas");
     canvas.className = "workbench__canvas";
     host.innerHTML = "";
@@ -602,7 +599,6 @@ export function ExperimentWorkbench({
       const cy = height * 0.5;
       const radius = Math.min(width, height) * 0.31;
 
-      // Outer 12-tick scale
       for (let i = 0; i < 12; i++) {
         const a = i * step - Math.PI / 2;
         const active = i === notch;
@@ -614,7 +610,6 @@ export function ExperimentWorkbench({
         ctx.stroke();
       }
 
-      // Main machined dial body
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(angle);
@@ -636,7 +631,6 @@ export function ExperimentWorkbench({
         ctx.stroke();
       }
 
-      // Indicator line + pin
       ctx.strokeStyle = accent;
       ctx.lineWidth = 3;
       ctx.beginPath();

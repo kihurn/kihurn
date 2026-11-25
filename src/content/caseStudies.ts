@@ -1,12 +1,8 @@
-// Case-study copy, keyed by project slug. Facts only: the original brief and each repo's README.
 
 export interface CaseStudy {
   problem: string;
-  /** short paragraphs under "How it works" */
   how: string[];
-  /** ordered steps drawn as a diagram */
   flow: string[];
-  /** shown instead of a diagram when the real one is not ready */
   diagramTodo?: string;
   result: string;
 }

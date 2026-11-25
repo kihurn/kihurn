@@ -16,7 +16,6 @@ export async function POST(request: Request) {
   }
   const r = validateTicket(body);
   if (!r.ok) {
-    // a filled honeypot looks like success, so bots learn nothing
     if (r.field === "website") return NextResponse.json({ ticketNo: makeTicketNumber(new Date()) });
     return NextResponse.json({ field: r.field, error: r.error }, { status: 400 });
   }

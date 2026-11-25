@@ -13,10 +13,6 @@ export interface HalftoneDot {
   hot: boolean;
 }
 
-/**
- * Computes displaced monochrome halftone matrix dots for miniature previews
- * and pure-math unit verification.
- */
 export function computeMiniHalftoneDots(
   width: number,
   height: number,
@@ -71,7 +67,6 @@ export function drawMiniExperimentFrame(
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
-  // Subtle registration grid
   ctx.strokeStyle = dark ? "rgba(236,236,233,0.06)" : "rgba(28,28,28,0.06)";
   ctx.lineWidth = 1;
   for (let x = 24; x < w; x += 24) {
@@ -94,7 +89,6 @@ export function drawMiniExperimentFrame(
     const baseR = Math.min(w, h) * 0.28;
     const tiltX = (px / Math.max(1, w) - 0.5) * 0.6;
     const tiltY = (py / Math.max(1, h) - 0.5) * 0.6;
-    // Multi-ring contour latitudes
     for (let ring = 0; ring < 7; ring++) {
       const k = ring / 6;
       const rScale = 0.42 + k * 0.62;
@@ -212,7 +206,6 @@ export function drawMiniExperimentFrame(
     return;
   }
 
-  // Project wireframe architectural schematic
   drawProjectSchematic(ctx, slug, w, h, t, dark);
 }
 
@@ -240,7 +233,6 @@ export function drawProjectSchematic(
 
   switch (slug) {
     case "otto": {
-      // Intent router octagon + live voice spectrum bars
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2 + t * 0.12;
@@ -259,7 +251,6 @@ export function drawProjectSchematic(
       break;
     }
     case "c0re": {
-      // Central Ollama gateway ring + keyed spoke satellites
       ctx.beginPath();
       ctx.arc(0, 0, r * 0.52, 0, Math.PI * 2);
       ctx.stroke();
@@ -284,7 +275,6 @@ export function drawProjectSchematic(
       break;
     }
     case "elysium": {
-      // High-concurrency check-in gate wave rings
       for (let k = 1; k <= 4; k++) {
         const ringR = r * (0.25 * k) + Math.sin(t * 1.8 - k * 0.7) * 2.5;
         ctx.strokeStyle = k === 4 ? accent : fg;
@@ -302,7 +292,6 @@ export function drawProjectSchematic(
       break;
     }
     case "securefin": {
-      // Zero-trust diamond biometric landmark reticle
       ctx.beginPath();
       ctx.moveTo(0, -r * 1.05);
       ctx.lineTo(r * 0.92, 0);
@@ -323,7 +312,6 @@ export function drawProjectSchematic(
       break;
     }
     case "campus-network": {
-      // Classified campus switch topology lattice (dashed stealth framing)
       const nodes: [number, number][] = [
         [-0.85, -0.58],
         [0, -0.82],
@@ -349,7 +337,6 @@ export function drawProjectSchematic(
       break;
     }
     case "billy": {
-      // Itemized receipt ledger columns
       const lw = r * 1.3;
       const lh = r * 1.6;
       ctx.strokeRect(-lw * 0.5, -lh * 0.5, lw, lh);
@@ -366,7 +353,6 @@ export function drawProjectSchematic(
       break;
     }
     case "v4ult": {
-      // Vault notched dial + chamber frame
       ctx.strokeRect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8);
       ctx.beginPath();
       ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
@@ -382,7 +368,6 @@ export function drawProjectSchematic(
       break;
     }
     default: {
-      // Pneumonia CNN convolutional kernel matrix
       for (let gx = -2; gx <= 2; gx++) {
         for (let gy = -2; gy <= 2; gy++) {
           const active = Math.abs(gx) + Math.abs(gy) <= 1;

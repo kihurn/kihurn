@@ -29,7 +29,7 @@ describe("in-memory limiter", () => {
   it("blocks the 51st chat call in a day", async () => {
     let allowed = 0;
     for (let i = 0; i < 51; i++) {
-      t += 61_000; // stay under the per-minute limit
+      t += 61_000;
       if ((await checkLimit("ip1", "chat")).allowed) allowed++;
     }
     expect(allowed).toBe(50);

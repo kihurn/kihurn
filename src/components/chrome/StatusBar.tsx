@@ -6,7 +6,6 @@ import { subscribeFps } from "@/lib/telemetry";
 import { formatKLTime } from "@/lib/time";
 
 interface Props {
-  /** null = unknown / not checked yet */
   chatOnline: boolean | null;
   building: string | null;
 }
@@ -90,7 +89,6 @@ export function StatusBar({ chatOnline: initial, building }: Props) {
       });
       observer.observe({ type: "largest-contentful-paint", buffered: true });
     } catch {
-      // ignore unsupported buffered LCP observers
     }
 
     try {
@@ -101,7 +99,6 @@ export function StatusBar({ chatOnline: initial, building }: Props) {
       });
       paintObserver.observe({ type: "paint", buffered: true });
     } catch {
-      // ignore unsupported paint observer
     }
 
     return () => {

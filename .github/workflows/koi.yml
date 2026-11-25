@@ -1,10 +1,7 @@
-# Copy into your profile repository as .github/workflows/koi.yml, then embed
-# <img src="koi/koi.gif" width="256" alt="My koi"> in its README.md.
 name: Koi
 
 on:
   schedule:
-    # Just after midnight UTC, so the koi shows the day that just ended.
     - cron: "20 0 * * *"
   workflow_dispatch:
   push:

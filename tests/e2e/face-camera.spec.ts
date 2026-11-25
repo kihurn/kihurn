@@ -17,7 +17,6 @@ test("models load only after Start camera, and the live verdict appears", async 
   await page.getByRole("button", { name: "Try it" }).click();
   expect(models).toEqual([]);
   await page.getByRole("button", { name: "Start camera" }).click();
-  // the fake feed has no face in it
   await expect(page.locator("[data-face-verdict]")).toHaveText("No face in view.", { timeout: 60_000 });
   expect(models.length).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Close" }).click();

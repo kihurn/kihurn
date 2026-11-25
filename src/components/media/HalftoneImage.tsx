@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
 interface Props {
   src: string;
@@ -14,18 +15,13 @@ interface Wake {
   x: number;
   y: number;
   t: number;
-  r: number; // reach in px
+  r: number;
 }
 
-const CELL = 7; // dot pitch in px
-const WAKE_MS = 900; // how long a point of the wake lingers
+const CELL = 7;
+const WAKE_MS = 900;
 const MAX_WAKE = 40;
 
-/**
- * An image whose pointer trail resolves into a 45-degree halftone dot screen: dots swell
- * where the picture is dark, then relax back as the wake fades. Mouse only; off under
- * prefers-reduced-motion and on touch. The <img> stays the real content for everyone.
- */
 export function HalftoneImage({ src, alt, width, height, className }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const img = useRef<HTMLImageElement>(null);
@@ -41,7 +37,7 @@ export function HalftoneImage({ src, alt, width, height, className }: Props) {
     const ctx = cv.getContext("2d");
     if (!ctx) return;
 
-    let luma: Float32Array | null = null; // darkness 0..1 per sample on the rotated grid
+    let luma: Float32Array | null = null;
     let cols = 0;
     let rows = 0;
     let w = 0;
@@ -58,7 +54,6 @@ export function HalftoneImage({ src, alt, width, height, className }: Props) {
         cv!.width = w * dpr;
         cv!.height = h * dpr;
         ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-        // sample the image at one pixel per dot cell
         cols = Math.ceil(w / CELL);
         rows = Math.ceil(h / CELL);
         const off = document.createElement("canvas");
@@ -76,7 +71,7 @@ export function HalftoneImage({ src, alt, width, height, className }: Props) {
           luma[i] = 1 - (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
         }
       } catch {
-        luma = null; // tainted or not decoded: the plain image is fine
+        luma = null;
       }
     }
 
@@ -86,13 +81,11 @@ export function HalftoneImage({ src, alt, width, height, className }: Props) {
     function frame(now: number) {
       raf = 0;
       ctx!.clearRect(0, 0, w, h);
-      // forget old points
       while (wake.length && now - wake[0].t > WAKE_MS) wake.shift();
       if (!luma || wake.length === 0) return;
 
       const inkC = ink();
       const paperC = paper();
-      // 45-degree screen: rotate cell coordinates
       const cos = Math.SQRT1_2;
       const sin = Math.SQRT1_2;
       const pitch = CELL * 1.25;
@@ -115,7 +108,6 @@ export function HalftoneImage({ src, alt, width, height, className }: Props) {
           const ci = Math.min(cols - 1, Math.max(0, Math.floor(x / CELL)));
           const ri = Math.min(rows - 1, Math.max(0, Math.floor(y / CELL)));
           const dark = luma[ri * cols + ci];
-          // the cell resolves: paper behind it, an ink dot swelling with darkness
           ctx!.globalAlpha = Math.min(1, energy * 1.6);
           ctx!.fillStyle = paperC;
           ctx!.fillRect(x - pitch / 2, y - pitch / 2, pitch, pitch);
@@ -163,8 +155,7 @@ export function HalftoneImage({ src, alt, width, height, className }: Props) {
 
   return (
     <div ref={wrap} className={`halftone ${className ?? ""}`} style={{ aspectRatio: `${width} / ${height}` }}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- sampled by the canvas; SVG placeholders need no optimizer */}
-      <img ref={img} src={src} alt={alt} width={width} height={height} className="halftone__img" draggable={false} />
+      <Image unoptimized ref={img} src={src} alt={alt} width={width} height={height} className="halftone__img" draggable={false} />
       <canvas ref={canvas} className="halftone__canvas" aria-hidden="true" />
     </div>
   );

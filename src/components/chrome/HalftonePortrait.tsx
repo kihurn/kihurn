@@ -1,7 +1,3 @@
-/**
- * Stylized monochrome halftone / dithered geometric portrait & registration emblem
- * used on the Studio pass and Front Office postage stamp.
- */
 export function HalftonePortrait({
   variant = "stamp",
   className = "",
@@ -9,7 +5,6 @@ export function HalftonePortrait({
   variant?: "stamp" | "badge";
   className?: string;
 }) {
-  // Deterministic halftone dot field modulated by sculptural portrait silhouette + wave interference
   const dots: Array<{ x: number; y: number; r: number; o: number }> = [];
   const cols = variant === "stamp" ? 18 : 20;
   const rows = variant === "stamp" ? 22 : 15;
@@ -58,7 +53,6 @@ export function HalftonePortrait({
       style={{ display: "block", width: "100%", height: "100%" }}
     >
       <rect width={w} height={h} fill={variant === "stamp" ? "#dcdbd7" : "#181817"} />
-      {/* Corner print crop reticles */}
       <g
         stroke={variant === "stamp" ? "#1e1e1e" : "#eaeae7"}
         strokeOpacity="0.45"
@@ -69,14 +63,12 @@ export function HalftonePortrait({
         <circle cx={w * 0.5} cy={h * 0.44} r={variant === "stamp" ? 66 : 46} strokeDasharray="2 3" />
       </g>
 
-      {/* Halftone dot screen */}
       <g fill={variant === "stamp" ? "#1c1c1c" : "#ecece9"}>
         {dots.map((d, idx) => (
           <circle key={idx} cx={d.x} cy={d.y} r={d.r} fillOpacity={d.o} />
         ))}
       </g>
 
-      {/* Geometric hairline emblem overlay */}
       <g
         stroke={variant === "stamp" ? "#b03a1e" : "#e06a4a"}
         strokeWidth="1.2"

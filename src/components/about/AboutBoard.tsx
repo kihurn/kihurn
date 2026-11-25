@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { HalftonePortrait } from "@/components/chrome/HalftonePortrait";
-
-// Deterministic 24x7 commit heat matrix (no random SSR mismatch)
-const HEAT_CELLS = Array.from({ length: 168 }, (_, i) => {
-  const v = ((i * 37 + 13) % 19) / 18;
-  const heat = v > 0.78 ? 0.88 : v > 0.52 ? 0.52 : v > 0.28 ? 0.26 : 0.08;
-  return { id: i, heat: heat.toFixed(2), delay: ((i % 24) * 0.018).toFixed(3) };
-});
+import { OptionalPhoto } from "@/components/media/OptionalPhoto";
+import { media } from "@/data/media";
+import { availableMedia } from "@/lib/server/media";
+import { ContributionCalendar } from "./ContributionCalendar";
+import { Turntable } from "./Turntable";
 
 export function AboutBoard() {
   return (
@@ -22,21 +20,16 @@ export function AboutBoard() {
       </header>
 
       <div className="ov3__board">
-        {/* Centerpiece Postcard & Postage Stamp */}
         <section
           className="ov3__item ov3__hero"
           data-canvas-item
           data-rot="0"
           tabIndex={0}
-          style={{ "--fx": "0", "--fy": "0.02" } as React.CSSProperties}
-          data-frank-stage
           aria-label="Wong Ki Hurn"
         >
-          <div className="ov3__hero-gl" data-frank-gl aria-hidden="true" />
-          <div className="ov3__hero-layer" data-frank-layer>
-            <article className="ov3__env u-card" data-frank-card data-hit data-marks-surface>
+          <div className="ov3__hero-layer">
+            <article className="ov3__env u-card" data-depth-card data-frank-card data-marks-surface>
               <span className="ov3__field" data-marks aria-hidden="true">
-                {/* Custom geometric archival stamps */}
                 <svg className="mark" style={{ width: 76, height: 76, top: "14%", left: "14%", opacity: 0.14, transform: "rotate(-12deg)" }} viewBox="0 0 80 80" fill="none">
                   <circle cx="40" cy="40" r="35" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 2" />
                   <circle cx="40" cy="40" r="24" stroke="currentColor" strokeWidth="1" />
@@ -124,9 +117,11 @@ export function AboutBoard() {
                     </filter>
                   </defs>
                 </svg>
-                <div className="frank__stamp" data-tilt style={{ "--print": "url(#stamp-print-kh)" } as React.CSSProperties}>
+                <div className="frank__stamp" style={{ "--print": "url(#stamp-print-kh)" } as React.CSSProperties}>
                   <div className="frank__photo u-no-drag">
-                    <HalftonePortrait variant="stamp" />
+                    <OptionalPhoto src={availableMedia(media.portrait)} alt="Wong Ki Hurn" width={400} height={480} className="stamp-photo">
+                      <HalftonePortrait variant="stamp" />
+                    </OptionalPhoto>
                   </div>
                   <span className="frank__cap">
                     Wong Ki Hurn
@@ -137,7 +132,11 @@ export function AboutBoard() {
                     </svg>
                   </span>
                 </div>
-                <span className="frank__shine" data-tilt-shine aria-hidden="true" />
+                <span className="frank__shine" aria-hidden="true" />
+                <svg className="frank__clip" viewBox="0 0 30 68" fill="none" aria-hidden="true">
+                  <path d="M9 53V15a8 8 0 0 1 16 0v39a11 11 0 1 1-22 0V20a6 6 0 0 1 12 0v31" stroke="#565754" strokeWidth="2.8" strokeLinecap="round" />
+                  <path d="M9 53V15a8 8 0 0 1 16 0v39a11 11 0 1 1-22 0V20a6 6 0 0 1 12 0v31" stroke="#e9e8da" strokeWidth=".85" strokeLinecap="round" transform="translate(-.55 -.4)" />
+                </svg>
                 <svg className="frank__postmark" data-marks-avoid viewBox="0 0 190 96" fill="none" aria-hidden="true" focusable="false">
                   <defs>
                     <path id="pm-arc-top-kh" d="M11 48a37 37 0 0 1 74 0" />
@@ -162,6 +161,10 @@ export function AboutBoard() {
               </div>
 
               <div className="ov3__conn">
+                <div className="ov3__identity">
+                  <h1>Wong Ki Hurn</h1>
+                  <p>Computer science · Systems engineering</p>
+                </div>
                 <div className="ov3__conn-row" data-marks-avoid>
                   <ul className="socials">
                     <li>
@@ -211,7 +214,7 @@ export function AboutBoard() {
                   </ul>
                 </div>
                 <div className="ov3__conn-row" data-marks-avoid>
-                  <button data-dialog-open="letter" aria-haspopup="dialog" aria-expanded="false" className="btn btn--solid text-tag">
+                  <button type="button" data-dialog-open="letter" aria-label="About me" aria-haspopup="dialog" aria-expanded="false" className="btn btn--solid text-tag">
                     <span className="btn__label roll" data-roll>About me</span>
                   </button>
                   <span className="ov3__conn-from text-label">KL → Subang Jaya</span>
@@ -221,13 +224,12 @@ export function AboutBoard() {
           </div>
         </section>
 
-        {/* Bottom-left Telemetry::Sync / Commit Matrix Card */}
         <article
           className="ov3__item ov3__tele u-card"
           data-canvas-item
+          data-depth-card
           data-rot="-1.3"
           tabIndex={0}
-          style={{ "--fx": "-0.34", "--fy": "0.33" } as React.CSSProperties}
           data-about
           data-state="boot"
           aria-label="Telemetry"
@@ -238,14 +240,7 @@ export function AboutBoard() {
             </span>
             <button className="ov3__scope" type="button" data-about-scope aria-pressed="false" aria-label="Toggle commit matrix color" />
           </div>
-          <div className="ov3__commits" aria-hidden="true">
-            {HEAT_CELLS.map((c) => (
-              <span
-                key={c.id}
-                style={{ "--heat": c.heat, "--d": `${c.delay}s`, "--gh": `rgba(57, 211, 83, ${c.heat})` } as React.CSSProperties}
-              />
-            ))}
-          </div>
+          <ContributionCalendar today={new Date().toISOString().slice(0, 10)} />
           <div className="ov3__tele-rows text-mono-meta">
             <span>
               <span className="k">LOCAL::</span>
@@ -263,73 +258,19 @@ export function AboutBoard() {
               <span className="k">ONLINE::</span>
               <span className="v ov3__roll" data-online>SYNC</span>
             </span>
-            <span data-commits-row>
-              <span className="k">COMMITS::</span>
-              <span className="v ov3__roll" data-commits-total>418 / YR</span>
-            </span>
           </div>
         </article>
 
-        {/* Bottom-right Music Rotation Turntable Card */}
         <article
           className="ov3__item ov3__radio-card u-card"
           data-canvas-item
+          data-depth-card
           data-rot="1.4"
           tabIndex={0}
-          style={{ "--fx": "0.33", "--fy": "0.32" } as React.CSSProperties}
           data-radio-card
           aria-label="Music rotation"
         >
-          <div className="con con--deck" data-radio-deck data-on="true" data-state="live">
-            <div className="con__zone">
-              <div className="con__head">
-                <span className="con__tag text-mono-tag">
-                  RADIO::<span className="con__roll" data-radio-status>SPIN</span>
-                </span>
-                <span className="con__meta text-mono-sm">
-                  <span className="con__onair" aria-hidden="true" />
-                  <span>ROTATION</span>
-                </span>
-              </div>
-              <div className="con__now">
-                <div className="con__deck">
-                  <button type="button" className="con__track" data-radio-next title="Next track">
-                    <span data-radio-title>Nujabes — Feather</span>
-                  </button>
-                  <span className="con__artist text-mono-sm" data-radio-artist>Modal Soul (2005)</span>
-                </div>
-                <div className="con__eq" aria-hidden="true">
-                  <i /><i /><i /><i /><i />
-                </div>
-              </div>
-              <div className="con__progress text-mono-sm">
-                <button type="button" className="radio-toggle text-mono-sm" data-radio-toggle aria-pressed="true">
-                  PAUSE
-                </button>
-                <div className="con__bar">
-                  <span data-radio-bar style={{ transform: "scaleX(0.42)" }} />
-                </div>
-                <span data-radio-elapsed>01:42</span>
-              </div>
-            </div>
-            <div className="con__spec">
-              <div className="vinyl-turntable" aria-hidden="true">
-                <div className="vinyl-disc" data-vinyl>
-                  <span className="vinyl-disc__label" />
-                </div>
-                <svg className="vinyl-tonearm" viewBox="0 0 48 64" fill="none">
-                  <circle cx="38" cy="10" r="6" stroke="currentColor" strokeWidth="1.5" fill="#1c1c1c" />
-                  <circle cx="38" cy="10" r="2" fill="currentColor" />
-                  <path d="M38 10 L29 40 L20 49" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                  <rect x="16" y="47" width="7" height="4" rx="1" transform="rotate(-40 19.5 49)" fill="#e06a4a" />
-                </svg>
-              </div>
-              <div className="con__read">
-                <span className="con__k">BPM::</span>
-                <span className="con__v" data-radio-bpm>92</span>
-              </div>
-            </div>
-          </div>
+          <Turntable sources={media.radio.map(({ art, audio }) => ({ art: availableMedia(art), audio: availableMedia(audio) }))} />
         </article>
       </div>
 

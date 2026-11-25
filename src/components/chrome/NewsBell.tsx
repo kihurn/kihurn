@@ -14,7 +14,6 @@ function when(date: string): string {
   }).format(d);
 }
 
-/** The "What's new" drawer (the bell button lives in Header). */
 export function NewsPanel() {
   const items = [...news]
     .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0))

@@ -20,10 +20,6 @@ function shouldShowPreloader(): boolean {
   }
 }
 
-/**
- * Initial dark textured-paper preloader (0 -> 100) with bottom-left KH stamp pill,
- * bottom-center slim progress bar, and bottom-right bold tabular counter.
- */
 export function Preloader() {
   const [phase, setPhase] = useState<"boot" | "fading" | "done">("boot");
   const counterRef = useRef<HTMLSpanElement>(null);
@@ -110,11 +106,13 @@ export function Preloader() {
           </div>
         </div>
 
-        <div className="preloader__count-wrap">
-          <span className="preloader__count u-tabular" ref={counterRef}>
-            0
-          </span>
-        </div>
+        {phase === "boot" ? (
+          <div className="preloader__count-wrap">
+            <span className="preloader__count u-tabular" ref={counterRef}>
+              0
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   );

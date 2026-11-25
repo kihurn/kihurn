@@ -1,8 +1,6 @@
 import type { FaqEntry } from "./types";
 import { site } from "./site";
 
-// Scripted answers: the Home chips, and the fallback when Ki Hurn's PC is off.
-// Facts only, from the original brief and the project READMEs.
 
 export const faq: FaqEntry[] = [
   {

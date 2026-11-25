@@ -14,10 +14,11 @@ export const metadata: Metadata = {
   description: "Wong Ki Hurn: Computer Science student and part-time system engineer in Subang Jaya, Malaysia.",
 };
 
+export const revalidate = 3600;
+
 export default function AboutPage() {
   return (
     <main id="main" className="aboutpage">
-      <h1 className="u-sr-only">About Wong Ki Hurn</h1>
       <AboutBoard />
       <AboutDialogs />
       <AboutBehaviors />

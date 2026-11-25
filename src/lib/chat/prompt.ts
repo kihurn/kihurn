@@ -3,7 +3,6 @@ import { projects } from "@/content/projects";
 import { now } from "@/content/now";
 import { timeline, skillGroups, spokenLanguages } from "@/content/about";
 
-/** Built only from public site content. Never add env values or URLs of the model host here. */
 export function buildSystemPrompt(): string {
   const proj = projects
     .map((p) => `- ${p.name} (${p.status}): ${p.summary} Stack: ${p.stack.join(", ")}.`)

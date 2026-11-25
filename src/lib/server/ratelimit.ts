@@ -72,7 +72,6 @@ export async function checkLimit(key: string, bucket: Bucket): Promise<LimitResu
       }
       return { allowed: true };
     } catch {
-      // fall through to the in-memory limiter if Upstash is unreachable
     }
   } else if (process.env.NODE_ENV === "production" && !warned) {
     warned = true;

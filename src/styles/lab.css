@@ -1,8 +1,6 @@
-/* Lab: ecosystem map, lens filter, entries, case studies */
 
 .labpage{display:flex;flex-direction:column}
 .labpage__rest{padding:var(--s-80) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;inline-size:100%;display:flex;flex-direction:column;gap:var(--s-64)}
-/* the case study pages have no wheel, so they keep the old top padding */
 .labpage.case{padding:calc(var(--s-80) + var(--s-48)) var(--margin) var(--s-64);max-inline-size:72rem;margin-inline:auto;gap:var(--s-64)}
 .labpage__head{display:flex;flex-direction:column;gap:var(--s-14)}
 .labpage__head h1{margin:0}
@@ -11,7 +9,6 @@
 .lab-sec__title{margin:0;opacity:.7}
 .lab-sec__note{margin:0;opacity:.7;max-inline-size:40rem}
 
-/* ecosystem map: three columns on desktop, a stack on phones */
 .eco{position:relative;min-block-size:22rem;border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper));color:var(--ink)}
 .eco__edges{position:absolute;inset:0;inline-size:100%;block-size:100%;opacity:.55;pointer-events:none}
 .eco__node{position:absolute;inset-inline-start:var(--x);inset-block-start:var(--y);transform:translate(-50%,-50%);inline-size:clamp(9rem,22%,13rem);display:flex;flex-direction:column;gap:var(--s-4);align-items:flex-start;text-align:start;padding:var(--s-12) var(--s-14);border:1px solid var(--ink);border-radius:var(--r-lg,.75rem);background:var(--paper);color:var(--ink);font:inherit;cursor:pointer;transition:background .2s var(--ease-out-quad),transform .2s var(--ease-out-quad)}
@@ -29,7 +26,6 @@
   .eco__uses{display:block}
 }
 
-/* the chat path, and case-study diagrams */
 .flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s-8)}
 .flow__step{position:relative;display:flex;gap:var(--s-14);align-items:baseline;padding:var(--s-12) var(--s-16);border:1px solid var(--line);border-radius:var(--r-lg,.75rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
 .flow__step:not(:last-child)::after{content:"↓";position:absolute;inset-inline-start:var(--s-16);inset-block-end:calc(-1 * var(--s-14));font-size:.9rem;opacity:.6;background:var(--paper);line-height:1}
@@ -40,13 +36,11 @@
   .flow__step:not(:last-child)::after{content:"→";inset-inline-start:auto;inset-inline-end:calc(-1 * var(--s-10));inset-block-end:auto;inset-block-start:50%;transform:translateY(-50%)}
 }
 
-/* lens filter */
 .labb{display:flex;flex-direction:column;gap:var(--s-48)}
 .lens{display:flex;flex-wrap:wrap;gap:var(--s-8)}
 .lens__btn{appearance:none;cursor:pointer;color:inherit;border:1px solid var(--line);min-block-size:2.25rem}
 .lens__btn[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
-/* entries */
 .entries{display:flex;flex-direction:column;gap:var(--s-24)}
 .pentry{scroll-margin-block-start:7rem;display:flex;flex-direction:column;gap:var(--s-16);padding:var(--s-24);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
 .pentry__head{display:flex;flex-direction:column;gap:var(--s-10)}
@@ -59,19 +53,16 @@
 .plinks{display:flex;flex-wrap:wrap;gap:var(--s-8) var(--s-24);list-style:none;margin:0;padding:0}
 .plinks a{color:inherit}
 
-/* procedural architectural schematic frame */
 .shot{position:relative;display:grid;place-items:center;margin:0;aspect-ratio:16/7;border:1px solid var(--line);border-radius:var(--r-lg,.75rem);overflow:hidden;background:color-mix(in srgb,var(--ink) 4%,var(--paper))}
 .shot__canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .shot--blur .shot__canvas{filter:blur(2px) opacity(.55)}
 .shot__t{position:relative;z-index:1;opacity:.85;background:color-mix(in srgb,var(--paper) 84%,transparent);backdrop-filter:blur(6px);padding:var(--s-4) var(--s-10);border:1px solid var(--line);border-radius:var(--r-sm,.25rem)}
 
-/* 3D book card */
 .book{display:flex;flex-direction:column;gap:var(--s-8);padding:var(--s-24);border:1px solid var(--line);border-radius:var(--r-xl,1rem);color:inherit;text-decoration:none;background:color-mix(in srgb,var(--ink) 4%,var(--paper));max-inline-size:34rem}
 .book:hover,.book:focus-visible{background:color-mix(in srgb,var(--ink) 10%,var(--paper))}
 .book__t{font-size:clamp(1.75rem,4vw,2.5rem)}
 .book__k,.book__d{opacity:.7}
 
-/* case study pages */
 .case__back{color:inherit;text-decoration:none;opacity:.7;align-self:flex-start}
 .case__back:hover,.case__back:focus-visible{opacity:1;text-decoration:underline}
 .case .lab-sec p{max-inline-size:46rem;margin:0}
@@ -80,7 +71,6 @@
   .eco__node{transition:none}
 }
 
-/* motion & shader workbench shelf + stage */
 .exp-shelf{list-style:none;margin:0;padding:0;display:grid;gap:var(--s-16);grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))}
 .exp-shelf__card{display:flex;flex-direction:column;gap:var(--s-10);padding:var(--s-20);border:1px solid var(--line);border-radius:var(--r-xl,1rem);background:color-mix(in srgb,var(--ink) 4%,var(--paper));text-decoration:none;color:inherit;height:100%;transition:background-color .2s var(--ease-out-quad),border-color .2s}
 .exp-shelf__card:hover,.exp-shelf__card:focus-visible{background:color-mix(in srgb,var(--ink) 9%,var(--paper));border-color:var(--ink)}

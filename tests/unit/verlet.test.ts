@@ -50,8 +50,18 @@ describe("verlet chain physics", () => {
 
     releaseTailWithImpulse(chain, 100, -100);
     expect(tail.pinned).toBe(false);
-    // Impulse is clamped to [-28, 28]
     expect(tail.x - tail.oldX).toBe(28);
     expect(tail.y - tail.oldY).toBe(-28);
+  });
+
+  it("carries a depth impulse through the rope while anchoring its top", () => {
+    const chain = createVerletChain(200, 16, 10, 22, 0);
+    pinTailToPoint(chain, 200, 185, 55);
+    releaseTailWithImpulse(chain, 0, 0, 24);
+    const tail = chain.nodes[chain.nodes.length - 1];
+    expect(tail.z - tail.oldZ).toBe(18);
+    for (let i = 0; i < 5; i++) stepVerletChain(chain);
+    expect(chain.nodes[0].z).toBe(0);
+    expect(Math.abs(chain.nodes[8].z)).toBeGreaterThan(1);
   });
 });

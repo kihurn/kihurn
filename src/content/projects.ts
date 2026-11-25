@@ -1,7 +1,5 @@
 import type { Project } from "./types";
 
-// Facts only from the original brief (section 4) and each repo's README.
-// Missing facts are the literal text TODO and are listed in docs/TODO.md.
 
 export const projects: Project[] = [
   {

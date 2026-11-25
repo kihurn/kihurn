@@ -5,7 +5,6 @@ import { crewRoles } from "@/content/gigs";
 import { site } from "@/content/site";
 import { HalftoneImage } from "@/components/media/HalftoneImage";
 
-/** A flat crew pass. Click, tap or press Enter to flip it and see the roles. */
 export function CrewPass() {
   const [flipped, setFlipped] = useState(false);
   return (

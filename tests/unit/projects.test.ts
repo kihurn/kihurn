@@ -32,7 +32,7 @@ const fixture: Project[] = [
   p({ slug: "v4ult", status: "building", showOnHome: true, lenses: ["fullstack"] }),
   p({ slug: "elysium", status: "done", finishedOn: "2026-08", featured: true, lenses: ["fullstack"] }),
   p({ slug: "securefin", status: "done", finishedOn: "TODO", featured: true, lenses: ["security", "ai"] }),
-  p({ slug: "pneumonia", status: "done", lenses: ["ai"] }), // finishedOn undefined
+  p({ slug: "pneumonia", status: "done", lenses: ["ai"] }),
   p({ slug: "campus", status: "internal", lenses: ["networking"] }),
   p({ slug: "paused-thing", status: "paused" }),
 ];
@@ -46,10 +46,10 @@ describe("getBuilding", () => {
 describe("getRecentlyDone", () => {
   it("orders by finishedOn desc with TODO and missing last, at most n", () => {
     expect(getRecentlyDone(fixture, 10).map((x) => x.slug)).toEqual([
-      "elysium", // 2026-08
-      "billy", // 2025-11
-      "securefin", // TODO
-      "pneumonia", // undefined
+      "elysium",
+      "billy",
+      "securefin",
+      "pneumonia",
     ]);
     expect(getRecentlyDone(fixture).length).toBe(3);
     expect(getRecentlyDone(fixture, 1).map((x) => x.slug)).toEqual(["elysium"]);

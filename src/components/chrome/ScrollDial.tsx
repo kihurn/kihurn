@@ -6,10 +6,6 @@ import { subscribeScroll } from "@/lib/telemetry";
 const R = 16;
 const CIRC = 2 * Math.PI * R;
 
-/**
- * Slim right-edge scroll indicator that smoothly expands into an analog/radial
- * scroll-progress dial while actively scrolling. Zero React state updates.
- */
 export function ScrollDial() {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackFillRef = useRef<HTMLSpanElement>(null);

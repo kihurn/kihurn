@@ -5,7 +5,6 @@ const klTime = new Intl.DateTimeFormat("en-GB", {
   hourCycle: "h23",
 });
 
-/** "KL HH:MM", 24-hour, always Kuala Lumpur time. */
 export function formatKLTime(d: Date): string {
   return `KL ${klTime.format(d)}`;
 }

@@ -3,7 +3,7 @@ import "server-only";
 export interface ActivityItem {
   repo: string;
   text: string;
-  at: string; // ISO
+  at: string;
   url: string;
 }
 
@@ -54,16 +54,15 @@ async function fetchRepo(repo: string, fetchImpl: typeof fetch): Promise<Activit
       headers,
       next: { revalidate: 3600 },
     } as RequestInit);
-    if (!res.ok) return []; // 403 rate limit, 404 private repo...
+    if (!res.ok) return [];
     const events: unknown = await res.json();
     if (!Array.isArray(events)) return [];
     return events.map((e) => toItem(repo, e as GhEvent)).filter((x): x is ActivityItem => x !== null);
   } catch {
-    return []; // network error or junk body: this repo just has no activity to show
+    return [];
   }
 }
 
-/** Public GitHub activity for the given repos, newest first. Never throws. */
 export async function getActivity(repos: string[], limit = 8, fetchImpl: typeof fetch = fetch): Promise<ActivityItem[]> {
   const perRepo = await Promise.all(repos.map((r) => fetchRepo(r, fetchImpl)));
   return perRepo

@@ -2,20 +2,6 @@
 
 import { useEffect } from "react";
 
-const TRACKS = [
-  { title: "Nujabes — Feather", artist: "Modal Soul (2005)", bpm: "92" },
-  { title: "Ryo Fukui — Scenery", artist: "Scenery (1976)", bpm: "116" },
-  { title: "LAMP — Yume Utsutsu", artist: "For Lovers (2004)", bpm: "84" },
-];
-
-/**
- * Client behaviour for /about:
- * - Native <dialog> open/close + SVG signature stroke animation
- * - Magnetic row reader highlight inside "The record"
- * - 3D pointer tilt & specular shine on the postage stamp
- * - Draggable / focusable board cards with scrim & Escape exit
- * - Live KL clock, /api/chat/health sync, commit tape toggle & radio deck
- */
 export function AboutBehaviors() {
   useEffect(() => {
     const cleanups: Array<() => void> = [];
@@ -26,7 +12,6 @@ export function AboutBehaviors() {
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // ---- Native <dialog> + signature stroke animation ----
     function animateSignature(dlg: Element) {
       const path = dlg.querySelector<SVGPathElement>("[data-sig-path]");
       if (!path || reduced) return;
@@ -64,7 +49,6 @@ export function AboutBehaviors() {
       });
     });
 
-    // ---- Magnetic row reader inside "The record" ----
     const recBody = document.querySelector<HTMLElement>("[data-record-body]");
     const recReader = document.querySelector<HTMLElement>("[data-record-reader]");
     if (recBody && recReader) {
@@ -81,145 +65,147 @@ export function AboutBehaviors() {
       });
     }
 
-    // ---- 3D tilt & specular shine on the postage stamp & postcard ----
-    const stamp = document.querySelector<HTMLElement>("[data-tilt]");
-    const shine = document.querySelector<HTMLElement>("[data-tilt-shine]");
-    const frankStage = document.querySelector<HTMLElement>("[data-frank-stage]");
-    const frankCard = document.querySelector<HTMLElement>("[data-frank-card]");
-    if (frankStage && frankCard && !reduced) {
-      frankCard.style.transition = "transform 0.42s cubic-bezier(.16, 1, .3, 1)";
-      on(frankStage, "pointermove", (ev) => {
-        const e = ev as PointerEvent;
-        const r = frankStage.getBoundingClientRect();
-        const nx = (e.clientX - r.left) / Math.max(1, r.width) - 0.5;
-        const ny = (e.clientY - r.top) / Math.max(1, r.height) - 0.5;
-        frankCard.style.transform = `perspective(1100px) rotateX(${(-ny * 4.5).toFixed(2)}deg) rotateY(${(nx * 4.5).toFixed(2)}deg)`;
-      });
-      on(frankStage, "pointerleave", () => {
-        frankCard.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg)";
-      });
-    }
-    if (stamp && !reduced) {
-      stamp.style.transition = "transform 0.35s cubic-bezier(.16, 1, .3, 1)";
-      on(stamp, "pointermove", (ev) => {
-        const e = ev as PointerEvent;
-        const r = stamp.getBoundingClientRect();
-        const nx = (e.clientX - r.left) / Math.max(1, r.width) - 0.5;
-        const ny = (e.clientY - r.top) / Math.max(1, r.height) - 0.5;
-        stamp.style.transform = `perspective(700px) rotateX(${(-ny * 10).toFixed(2)}deg) rotateY(${(nx * 10).toFixed(2)}deg) scale(1.02)`;
-        if (shine) {
-          shine.style.opacity = "0.75";
-          shine.style.setProperty("--shx", `${((nx + 0.5) * 100).toFixed(1)}%`);
-          shine.style.setProperty("--shy", `${((ny + 0.5) * 100).toFixed(1)}%`);
-        }
-      });
-      on(stamp, "pointerleave", () => {
-        stamp.style.transform = "perspective(700px) rotateX(0deg) rotateY(0deg) scale(1)";
-        if (shine) shine.style.opacity = "0";
-      });
-    }
-
-    // ---- Interactive draggable / focusable board cards (desktop) ----
     const boardItems = [...document.querySelectorAll<HTMLElement>("[data-canvas-item]")];
     const scrim = document.querySelector<HTMLElement>("[data-canvas-scrim]");
     const exitWrap = document.querySelector<HTMLElement>("[data-canvas-exit]");
     const exitBtn = document.querySelector<HTMLElement>("[data-canvas-close]");
-    let zTop = 10;
+    const desktop = window.matchMedia("(min-width: 64rem)");
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let activeCard: HTMLElement | null = null;
 
-    function deactivateCard() {
+    function deactivateCard(restoreFocus = false) {
       if (!activeCard) return;
-      activeCard.classList.remove("is-active");
-      activeCard.style.zIndex = String(++zTop);
-      boardItems.forEach((it) => it.classList.remove("is-dimmed"));
+      const previous = activeCard;
+      previous.classList.remove("is-active");
+      activeCard = null;
+      boardItems.forEach((item) => { item.inert = false; });
       if (scrim) scrim.hidden = true;
       if (exitWrap) exitWrap.hidden = true;
-      activeCard = null;
+      if (restoreFocus) previous.focus({ preventScroll: true });
     }
 
-    function activateCard(el: HTMLElement) {
-      if (window.innerWidth < 1024) return;
-      activeCard = el;
-      el.style.zIndex = "60";
-      el.classList.add("is-active");
-      boardItems.forEach((it) => {
-        if (it !== el) it.classList.add("is-dimmed");
-      });
+    function activateCard(item: HTMLElement) {
+      if (!desktop.matches || item.classList.contains("ov3__hero")) return;
+      if (activeCard === item) {
+        deactivateCard(true);
+        return;
+      }
+      activeCard = item;
+      item.classList.add("is-active");
+      boardItems.forEach((other) => { other.inert = other !== item; });
       if (scrim) scrim.hidden = false;
       if (exitWrap) exitWrap.hidden = false;
+      item.focus({ preventScroll: true });
     }
 
     boardItems.forEach((item) => {
-      const baseRot = Number(item.dataset.rot ?? "0");
-      let dx = 0;
-      let dy = 0;
-      let dragging = false;
-      let moved = 0;
+      const surface = item.matches("[data-depth-card]") ? item : item.querySelector<HTMLElement>("[data-depth-card]");
+      if (!surface) return;
+      const style = surface.style;
+      style.setProperty("--rest-rotation", `${item.dataset.rot ?? "0"}deg`);
+      let pointer: number | null = null;
+      let offsetX = 0;
+      let offsetY = 0;
+      let pressX = 0;
+      let pressY = 0;
       let startX = 0;
       let startY = 0;
+      let wasDragged = false;
+      let frame = 0;
 
-      const applyTransform = (scale = 1, rot = baseRot) => {
-        if (window.innerWidth < 1024) {
-          item.style.transform = "";
+      const settle = () => {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        delete surface.dataset.lifted;
+        for (const property of ["--tilt-x", "--tilt-y", "--shine-x", "--shine-y", "--shadow-x"]) {
+          style.removeProperty(property);
+        }
+      };
+
+      on(surface, "pointermove", (ev) => {
+        const event = ev as PointerEvent;
+        if (pointer !== null) {
+          if (pointer !== event.pointerId) return;
+          const dx = event.clientX - pressX;
+          const dy = event.clientY - pressY;
+          wasDragged ||= Math.hypot(dx, dy) > 6;
+          if (!wasDragged) return;
+          offsetX = Math.max(-65, Math.min(65, startX + dx));
+          offsetY = Math.max(-45, Math.min(45, startY + dy));
+          style.setProperty("--drag-x", `${offsetX}px`);
+          style.setProperty("--drag-y", `${offsetY}px`);
           return;
         }
-        item.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg) scale(${scale})`;
-      };
-      applyTransform();
-
-      on(item, "pointerdown", (ev) => {
-        const e = ev as PointerEvent;
-        if (window.innerWidth < 1024) return;
-        const target = e.target as HTMLElement;
-        if (target.closest("a, button, input")) return;
-        dragging = true;
-        moved = 0;
-        startX = e.clientX - dx;
-        startY = e.clientY - dy;
-        item.style.zIndex = String(++zTop);
-        item.classList.add("is-held");
-        try {
-          item.setPointerCapture(e.pointerId);
-        } catch {}
+        if (motion.matches || event.pointerType !== "mouse") return;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          const rect = surface.getBoundingClientRect();
+          const x = Math.max(-0.5, Math.min(0.5, (event.clientX - rect.left) / Math.max(1, rect.width) - 0.5));
+          const y = Math.max(-0.5, Math.min(0.5, (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5));
+          style.setProperty("--tilt-x", `${-y * 17}deg`);
+          style.setProperty("--tilt-y", `${x * 21}deg`);
+          style.setProperty("--shine-x", `${(x + 0.5) * 100}%`);
+          style.setProperty("--shine-y", `${(y + 0.5) * 100}%`);
+          style.setProperty("--shadow-x", `${-x * 32}px`);
+          surface.dataset.lifted = "";
+        });
       });
+      on(surface, "pointerleave", settle);
+      on(motion, "change", settle);
 
-      on(item, "pointermove", (ev) => {
-        if (!dragging) return;
-        const e = ev as PointerEvent;
-        const nx = e.clientX - startX;
-        const ny = e.clientY - startY;
-        moved += Math.abs(nx - dx) + Math.abs(ny - dy);
-        dx = Math.max(-260, Math.min(260, nx));
-        dy = Math.max(-180, Math.min(180, ny));
-        applyTransform(1.01, baseRot);
+      on(surface, "pointerdown", (ev) => {
+        const event = ev as PointerEvent;
+        const target = event.target as Element;
+        if (target.closest("a,button,input,textarea,select") || !desktop.matches || pointer !== null || event.button !== 0 || event.pointerType !== "mouse") return;
+        if (motion.matches) {
+          activateCard(item);
+          return;
+        }
+        pointer = event.pointerId;
+        pressX = event.clientX;
+        pressY = event.clientY;
+        startX = offsetX;
+        startY = offsetY;
+        wasDragged = false;
+        item.classList.add("is-held");
+        surface.setPointerCapture(event.pointerId);
       });
 
       const endDrag = (ev: Event) => {
-        if (!dragging) return;
-        dragging = false;
+        const event = ev as PointerEvent;
+        if (pointer !== event.pointerId) return;
+        pointer = null;
         item.classList.remove("is-held");
-        const e = ev as PointerEvent;
-        try {
-          if (item.hasPointerCapture(e.pointerId)) item.releasePointerCapture(e.pointerId);
-        } catch {}
-        applyTransform(1, baseRot);
-        if (moved < 6 && !item.classList.contains("ov3__hero")) {
-          if (activeCard === item) deactivateCard();
-          else activateCard(item);
-        }
+        if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
+        if (event.type === "pointerup" && !wasDragged) activateCard(item);
+        if (!item.matches(":hover")) settle();
       };
 
-      on(item, "pointerup", endDrag);
-      on(item, "pointercancel", endDrag);
+      on(surface, "pointerup", endDrag);
+      on(surface, "pointercancel", endDrag);
+      on(surface, "lostpointercapture", endDrag);
+      on(item, "keydown", (ev) => {
+        const event = ev as KeyboardEvent;
+        if (event.target !== item || !desktop.matches || item.classList.contains("ov3__hero") || !["Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        activateCard(item);
+      });
+      on(desktop, "change", () => {
+        offsetX = offsetY = 0;
+        style.removeProperty("--drag-x");
+        style.removeProperty("--drag-y");
+        if (!desktop.matches) deactivateCard();
+      });
+      cleanups.push(settle);
     });
 
-    if (scrim) on(scrim, "click", deactivateCard);
-    if (exitBtn) on(exitBtn, "click", deactivateCard);
+    if (scrim) on(scrim, "click", () => deactivateCard(true));
+    if (exitBtn) on(exitBtn, "click", () => deactivateCard(true));
     on(window, "keydown", (ev) => {
-      if ((ev as KeyboardEvent).key === "Escape") deactivateCard();
+      if ((ev as KeyboardEvent).key === "Escape") deactivateCard(true);
     });
 
-    // ---- Telemetry clock + /api/chat/health sync + tape flip ----
     const fmt = new Intl.DateTimeFormat("en-GB", {
       timeZone: "Asia/Kuala_Lumpur",
       hour: "2-digit",
@@ -270,63 +256,6 @@ export function AboutBehaviors() {
         else document.documentElement.removeAttribute("data-tape");
       });
     }
-
-    // ---- Interactive Radio / Music Rotation Deck ----
-    const deck = document.querySelector<HTMLElement>("[data-radio-deck]");
-    const toggleBtn = document.querySelector<HTMLElement>("[data-radio-toggle]");
-    const nextBtn = document.querySelector<HTMLElement>("[data-radio-next]");
-    const statusEl = document.querySelector<HTMLElement>("[data-radio-status]");
-    const titleEl = document.querySelector<HTMLElement>("[data-radio-title]");
-    const artistEl = document.querySelector<HTMLElement>("[data-radio-artist]");
-    const bpmEl = document.querySelector<HTMLElement>("[data-radio-bpm]");
-    const barEl = document.querySelector<HTMLElement>("[data-radio-bar]");
-    const elapsedEl = document.querySelector<HTMLElement>("[data-radio-elapsed]");
-
-    let playing = true;
-    let trackIdx = 0;
-    let progress = 0.42;
-
-    const paintTrack = () => {
-      const tr = TRACKS[trackIdx];
-      if (titleEl) titleEl.textContent = tr.title;
-      if (artistEl) artistEl.textContent = tr.artist;
-      if (bpmEl) bpmEl.textContent = tr.bpm;
-    };
-
-    if (toggleBtn && deck) {
-      on(toggleBtn, "click", () => {
-        playing = !playing;
-        deck.dataset.on = String(playing);
-        toggleBtn.setAttribute("aria-pressed", String(playing));
-        toggleBtn.textContent = playing ? "PAUSE" : "PLAY";
-        if (statusEl) statusEl.textContent = playing ? "SPIN" : "HOLD";
-      });
-    }
-    if (nextBtn) {
-      on(nextBtn, "click", () => {
-        trackIdx = (trackIdx + 1) % TRACKS.length;
-        progress = 0.08;
-        paintTrack();
-      });
-    }
-
-    const radioTimer = window.setInterval(() => {
-      if (!playing) return;
-      progress += 0.006;
-      if (progress >= 1) {
-        progress = 0;
-        trackIdx = (trackIdx + 1) % TRACKS.length;
-        paintTrack();
-      }
-      if (barEl) barEl.style.transform = `scaleX(${progress.toFixed(3)})`;
-      if (elapsedEl) {
-        const secs = Math.floor(progress * 240);
-        const mm = String(Math.floor(secs / 60)).padStart(2, "0");
-        const ss = String(secs % 60).padStart(2, "0");
-        elapsedEl.textContent = `${mm}:${ss}`;
-      }
-    }, 1000);
-    cleanups.push(() => window.clearInterval(radioTimer));
 
     return () => cleanups.forEach((c) => c());
   }, []);

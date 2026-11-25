@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 const OFFLINE =
   "Ki Hurn's PC is asleep, so the chat is offline. The suggested questions still work!";
 
-/** metadata only: never the message */
 function log(status: number, ms: number, source: string) {
   console.info(JSON.stringify({ route: "chat", status, ms, source }));
 }
@@ -40,7 +39,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // only an exact chip question is answered from the script; everything else goes to the model
   const exact = faq.find((e) => e.question.toLowerCase() === input.message.toLowerCase());
   if (exact) {
     log(200, Date.now() - t0, "faq");

@@ -82,7 +82,6 @@ function ago(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
 }
 
-/** Renders nothing when GitHub gave us nothing, so a rate limit never leaves a hole. */
 export function ActivityFeed({ items }: { items: ActivityItem[] }) {
   if (items.length === 0) return null;
   return (

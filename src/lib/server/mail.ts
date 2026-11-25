@@ -12,7 +12,7 @@ export async function sendTicketEmail(t: Ticket, ticketNo: string): Promise<void
     to: site.email,
     replyTo: t.email,
     subject: `[${t.type.toUpperCase()}] ${ticketNo} from ${t.name}`,
-    text: `${t.message}\n\n--\n${t.name} <${t.email}>\nTicket ${ticketNo} (${t.type})`,
+    text: `${t.message}\n\n--\n${t.name} <${t.email}>\nTicket ${ticketNo} (${t.type})${t.referral ? `\nVia: ${t.referral}` : ""}`,
   });
   if (error) throw new Error(error.message);
 }

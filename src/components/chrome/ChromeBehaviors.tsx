@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { site } from "@/content/site";
 import { getThemeMetaColor, normalizeThemeMode, resolveThemeMode, type ThemeMode } from "@/lib/chrome";
 import { dispatchTornNavigate } from "./RouteTransition";
-import { dispatchThemeBurst } from "./ThemeParticles";
+import { dispatchThemeBurst } from "./GlobalDotField";
 
 type VTDocument = Document & { startViewTransition?: (cb: () => Promise<void> | void) => unknown };
 
@@ -63,17 +63,15 @@ function splitRoll(el: HTMLElement) {
   [...text].forEach((ch, i) => {
     const s = document.createElement("span");
     s.style.setProperty("--index", String(i));
-    s.textContent = ch === " " ? "\u00a0" : ch; // a bare space would collapse
+    s.textContent = ch === " " ? "\u00a0" : ch;
     el.appendChild(s);
   });
 }
 
 export function ChromeBehaviors() {
-  const router = useRouter();
   const pathname = usePathname();
   const settle = useRef<(() => void) | null>(null);
 
-  // route change finished: release the view transition / fade and roll any new labels
   useEffect(() => {
     settle.current?.();
     settle.current = null;
@@ -114,16 +112,10 @@ export function ChromeBehaviors() {
     }
     cleanups.push(() => window.clearTimeout(toastTimer));
 
-    // ---- navigation with organic torn-paper wipe (bypass when reduced motion) ----
     function go(path: string) {
-      if (reducedMotion()) {
-        router.push(path);
-        return;
-      }
       dispatchTornNavigate(path);
     }
 
-    // ---- theme ----
     let stored: ThemeMode = "dark";
     try {
       stored = normalizeThemeMode(localStorage.getItem("theme"));
@@ -135,7 +127,6 @@ export function ChromeBehaviors() {
       if (root.dataset.themeMode === "system") syncThemeDom("system");
     });
 
-    // ---- telemetry overlay toggle ----
     try {
       const tel = localStorage.getItem("telemetry");
       if (tel === "hidden") root.dataset.telemetry = "hidden";
@@ -143,7 +134,6 @@ export function ChromeBehaviors() {
 
     $$("[data-roll]").forEach(splitRoll);
 
-    // ---- overlays: palette / notifications / drawer ----
     const cmd = $("[data-cmd]")!;
     const notif = $("[data-notif]")!;
     const drawer = $("[data-drawer]")!;
@@ -273,14 +263,13 @@ export function ChromeBehaviors() {
       if (t.closest("[data-overlay]") || t === cmd || t === notif || t === drawer) closeAll();
     });
 
-    // local links go through the view transition
     on(
       document,
       "click",
       (e) => {
         const me = e as MouseEvent;
         const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href^='/']");
-        if (!a || a.target === "_blank" || me.metaKey || me.ctrlKey || me.shiftKey || me.button !== 0) return;
+        if (!a || a.target || a.hasAttribute("download") || me.metaKey || me.ctrlKey || me.shiftKey || me.altKey || me.button !== 0) return;
         const href = a.getAttribute("href")!;
         const path = href.split(/[?#]/)[0];
         if (href.includes("#") && path === window.location.pathname) return;
@@ -328,7 +317,6 @@ export function ChromeBehaviors() {
       }
     });
 
-    // ---- "What's new": unread state kept in localStorage ----
     const SEEN = "notif-seen";
     let seen = 0;
     try {
@@ -368,10 +356,8 @@ export function ChromeBehaviors() {
     });
 
     return () => cleanups.forEach((c) => c());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // nav pill follows the current route and hover
   useEffect(() => {
     const links = [...document.querySelectorAll<HTMLAnchorElement>(".navpill__link")];
     const pill = document.querySelector<HTMLElement>("[data-nav-pill]");

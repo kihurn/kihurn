@@ -1,7 +1,6 @@
 @font-face{font-family:"Geist Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(/fonts/geist-latin-wght-normal.woff2) format("woff2-variations")}
 @font-face{font-family:"Geist Mono Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(/fonts/geist-mono-latin-wght-normal.woff2) format("woff2-variations")}
 
-/* ---- Print-Shop / Creative Engineering HUD Monochrome Design Tokens ---- */
 :root,
 [data-theme="light"] {
   --paper: #d6d6d5;
@@ -43,7 +42,6 @@
   --btn-on: #1e1e1e;
 }
 
-/* pre-hydration ThemeSwitch alignment matching RootLayout's themeScript */
 html:not([data-hydrated="true"])[data-theme-mode="light"] .themetoggle__bg,
 html:not([data-hydrated="true"])[data-theme-mode="system"] .themetoggle__bg {
   opacity: 0;
@@ -57,7 +55,6 @@ html:not([data-hydrated="true"])[data-theme-mode="system"] .themetoggle__seg[dat
   color: var(--ink);
 }
 
-/* smooth animated theme transition fallback when View Transitions are unavailable */
 html.is-theming body,
 html.is-theming .header,
 html.is-theming .navpill,
@@ -69,7 +66,6 @@ html.is-theming .notif__panel {
   transition: background-color 0.32s var(--ease-out-quad), color 0.32s var(--ease-out-quad), border-color 0.32s var(--ease-out-quad);
 }
 
-/* wordmark: route-aware archival prefix */
 .wordmark {
   font-family: var(--font-mono, "Geist Mono Variable", ui-monospace, monospace);
   font-weight: 700;
@@ -84,7 +80,6 @@ html.is-theming .notif__panel {
   margin-inline-start: 1px;
 }
 
-/* top telemetry HUD bar */
 .hud {
   gap: var(--s-6);
   border-bottom: 1px solid var(--line);
@@ -115,24 +110,20 @@ html[data-telemetry="hidden"] .statusbar {
   display: none;
 }
 
-/* status bar keeps its first two readouts on phones */
 @media (width<=47.99rem) {
   .statusbar { display: flex; }
   .statusbar__chip--wide { display: none; }
 }
 
-/* command palette becomes a bottom sheet on phones */
 @media (width<=47.99rem) {
   .cmd { padding: 0; place-items: end stretch; }
   .cmd__panel { max-inline-size: none; border-radius: var(--r-2xl) var(--r-2xl) 0 0; max-block-size: 80vh; }
 }
 
-/* page transitions: native view transitions, or a short fade */
 html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
 ::view-transition-old(root),
 ::view-transition-new(root) { animation-duration: 0.28s; }
 
-/* stub pages until phase B/C pages replace them */
 .page-stub {
   min-block-size: 70vh;
   padding: calc(var(--s-80) + var(--s-64)) var(--margin) var(--s-48);
@@ -141,7 +132,6 @@ html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
 }
 .page-stub h1 { margin-block-end: var(--s-16); }
 
-/* slim right-edge dynamic scroll indicator + radial dial */
 .scrolldial {
   position: fixed;
   inset-block: 50%;
@@ -222,7 +212,6 @@ html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
   .scrolldial { display: none; }
 }
 
-/* persistent architectural footer */
 .footer {
   display: flex;
   flex-wrap: wrap;
@@ -267,7 +256,6 @@ html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
   font-variant-numeric: tabular-nums;
 }
 
-/* HUD feedback toast */
 .hud-toast {
   position: fixed;
   inset-block-end: var(--s-20);
@@ -290,7 +278,6 @@ html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
   display: none;
 }
 
-/* subtle top backdrop gradient behind floating header so scrolled content never collides */
 .header {
   isolation: isolate;
 }
@@ -310,7 +297,6 @@ html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
   );
 }
 
-/* initial dark textured paper preloader (0 -> 100) */
 html[data-preloader="active"] {
   overflow: hidden;
 }
@@ -415,7 +401,6 @@ html[data-preloader="active"] {
   .preloader__track-wrap { width: 28vw; }
 }
 
-/* organic torn-paper route transition canvas */
 .torn-transition {
   position: fixed;
   inset: 0;
@@ -428,7 +413,6 @@ html[data-preloader="active"] {
   opacity: 1;
 }
 
-/* theme-flip burst particle canvas */
 .theme-burst {
   position: fixed;
   inset: 0;
@@ -438,7 +422,6 @@ html[data-preloader="active"] {
   z-index: 9990;
 }
 
-/* motion off when the visitor asks for it */
 @media (prefers-reduced-motion:reduce) {
   .overlay,.cmd,.cmd__panel,.notif,.notif__panel,.drawer,.drawer__sheet,.header,.navpill__pill,.themetoggle__bg,.scrolldial,.scrolldial__rail,.scrolldial__dial,.hud-toast,.preloader {
     transition: none !important;

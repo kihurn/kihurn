@@ -1,4 +1,3 @@
-/* Lab Wheel + Grid + List switcher stage */
 
 .lab {
   --lab-inset: max(var(--margin), (100% - var(--container-max)) / 2);
@@ -104,7 +103,6 @@
   }
 }
 
-/* Live interactive preview floating on right of wheel */
 .lab__preview {
   position: absolute;
   inset-block-start: clamp(6.75rem, 9.5vw, 8.25rem);
@@ -190,7 +188,6 @@
   }
 }
 
-/* GRID VIEW: 3-column architectural cards */
 .lab__grid-wrap {
   padding-block: clamp(7.25rem, 10vw, 8.75rem) var(--s-64);
   padding-inline: var(--lab-inset);
@@ -296,7 +293,6 @@
   opacity: 0.78;
 }
 
-/* LIST VIEW: Compact archival index rows */
 .lab__table-wrap {
   padding-block: clamp(7.25rem, 10vw, 8.75rem) var(--s-64);
   padding-inline: var(--lab-inset);
@@ -375,7 +371,6 @@
   }
 }
 
-/* Sticky bottom dock for switcher & stepper */
 .lab__dock {
   position: sticky;
   inset-block-end: var(--s-24);

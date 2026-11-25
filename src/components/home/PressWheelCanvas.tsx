@@ -58,7 +58,7 @@ function buildPlateTexture(item: WheelItem, index: number, dark: boolean): Plate
     paintProjectPlateCanvas(canvas, item, index, currentDark, loadedImg);
     map.needsUpdate = true;
   };
-  img.src = item.photo;
+  if (item.photo) img.src = item.photo;
 
   const repaint = (nextDark: boolean) => {
     currentDark = nextDark;
@@ -132,7 +132,6 @@ const PLATE_FRAGMENT_SHADER = `
     float depth = texture2D(uDepth, vUv).r;
     vec2 parallax = (uPointer - 0.5) * (depth - 0.5) * (0.045 * uActive) + uVel * depth * 0.025;
 
-    // Velocity-proportional scanline horizontal offset + RGB chromatic split
     float scan = sin(vUv.y * 140.0 + uTime * 22.0);
     float scanJitter = step(0.84, abs(scan)) * scan * uGlitch * 0.012;
     vec2 baseUv = clamp(vUv + parallax + vec2(scanJitter, 0.0), 0.004, 0.996);
@@ -147,7 +146,6 @@ const PLATE_FRAGMENT_SHADER = `
                    * smoothstep(0.0, 0.06, vUv.y) * smoothstep(1.0, 0.94, vUv.y);
     float dim = mix(0.68, 1.0, uActive);
 
-    // Crisp monochrome scanline veil when spinning fast
     float lineMask = 1.0 - (step(0.5, fract(vUv.y * 90.0)) * 0.08 * uGlitch);
 
     gl_FragColor = vec4(vec3(r, g, b) * dim * lineMask, a * uOpacity * mix(0.9, 1.0, vignette));
@@ -174,6 +172,7 @@ export function PressWheelCanvas({
       powerPreference: "high-performance",
     });
     const gl = renderer.getContext();
+    renderer.setClearColor(0, 0);
     const software = detectSoftwareGl(gl);
     renderer.setPixelRatio(software ? 1 : Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -184,7 +183,6 @@ export function PressWheelCanvas({
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     camera.position.z = 7.4;
 
-    // Studio environment + directional rim lighting for glossy 3D beveled icon tiles
     const pmrem = new THREE.PMREMGenerator(renderer);
     const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environment = envTex;
@@ -198,7 +196,6 @@ export function PressWheelCanvas({
     rimLight.position.set(-5.0, -2.5, 4.5);
     scene.add(rimLight);
 
-    // Geometries
     const photoGeo = new THREE.PlaneGeometry(3.2, 1.8, software ? 10 : 18, software ? 6 : 12);
     const tileBevelGeo = createBeveledTileGeometry(1.22, 0.22, 0.12, software ? 2 : 3, software ? 5 : 8);
     const tileFaceGeo = new THREE.PlaneGeometry(1.06, 1.06);
@@ -253,7 +250,6 @@ export function PressWheelCanvas({
       scene.add(plateMesh);
       leftMeshes.push(plateMesh);
 
-      // Right wheel: beveled 3D dark rounded-square tile + crisp front emblem face
       const emblemMap = buildEmblemTexture(item, i);
       texturesToDispose.push(emblemMap);
       const bodyMat = tileBodyMat.clone();
@@ -273,10 +269,9 @@ export function PressWheelCanvas({
       rightGroups.push({ group, bodyMat, faceMat });
     });
 
-    // Center monochrome particle vortex (THREE.Points) behind center typography
     const particleCount = software ? 260 : 420;
     const pPos = new Float32Array(particleCount * 3);
-    const pBase = new Float32Array(particleCount * 3); // [angle, radius, depthZ]
+    const pBase = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount; i++) {
       const t = i / particleCount;
       const angle = t * Math.PI * 16 + (i % 7) * 0.35;
@@ -384,7 +379,6 @@ export function PressWheelCanvas({
       const vx = s?.pointerVelX ?? 0;
       const vy = s?.pointerVelY ?? 0;
 
-      // Update monochrome particle vortex spiral
       const posAttr = vortexGeo.getAttribute("position") as THREE.BufferAttribute;
       const arr = posAttr.array as Float32Array;
       const swirlOffset = nowSec * 0.24 + pos * 0.45;
@@ -463,7 +457,6 @@ export function PressWheelCanvas({
           L.material.uniforms.uGlitch.value = smoothGlitch;
           L.material.uniforms.uTime.value = nowSec;
 
-          // Opposing right arc with tilted 3D beveled icon tiles reacting to cursor
           const rAngle = -off * 1.45;
           const rRadiusX = halfW * 0.34;
           const rRadiusY = halfH * 0.64;

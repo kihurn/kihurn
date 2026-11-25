@@ -71,7 +71,6 @@ export function WritingShelf({ items }: { items: Article[] }) {
             return (
               <li key={a.slug} className="bookcard">
                 <Link href={`/writing/${a.slug}`} className="bookcard__link" data-hover>
-                  {/* Interior paper stock sheet revealed when front cover swings open */}
                   <div className="bookcard__page" aria-hidden="true">
                     <div className="bookcard__page-head text-mono-sm">
                       <span>FOLIO::{spec.issueNo}</span>
@@ -82,7 +81,6 @@ export function WritingShelf({ items }: { items: Article[] }) {
                     <span className="bookcard__page-go text-mono-sm">OPEN ESSAY →</span>
                   </div>
 
-                  {/* Hinged 3D binder cover */}
                   <div className="bookcard__cover">
                     <div className="bookcard__spine" aria-hidden="true">
                       <span className="text-mono-sm">N°{spec.issueNo}</span>

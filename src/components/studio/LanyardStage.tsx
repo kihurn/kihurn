@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HalftonePortrait } from "@/components/chrome/HalftonePortrait";
+import { createLanyardScene } from "./lanyardScene";
 import {
   computeBadgePose,
   createVerletChain,
@@ -23,6 +24,7 @@ function getReduced() {
 export function LanyardStage() {
   const stageRef = useRef<HTMLDivElement>(null);
   const haloRef = useRef<HTMLCanvasElement>(null);
+  const glRef = useRef<HTMLCanvasElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [flipped, setFlipped] = useState(false);
@@ -58,8 +60,11 @@ export function LanyardStage() {
     let anchorX = rect.width * 0.5;
     let anchorY = 16;
     const chain = createVerletChain(anchorX, anchorY, 10, Math.min(26, Math.max(18, rect.height * 0.04)), 34);
+    const gl = glRef.current ? createLanyardScene(glRef.current, chain) : undefined;
+    if (gl) stage.dataset.glReady = "";
 
     let dragging = false;
+    let dragPointer = -1;
     let moved = 0;
     let dragOffsetX = 0;
     let dragOffsetY = 0;
@@ -67,10 +72,13 @@ export function LanyardStage() {
     let lastY = 0;
     let velX = 0;
     let velY = 0;
+    let dragOriginY = 0;
     let ptrX = rect.width * 0.5;
     let ptrY = rect.height * 0.5;
     let raf = 0;
     let t = 0;
+    let lastFrame = 0;
+    let elapsed = 1 / 60;
 
     const paint = () => {
       const { nodes } = chain;
@@ -92,14 +100,15 @@ export function LanyardStage() {
       const pose = computeBadgePose(chain);
       const tiltY = Math.max(-16, Math.min(16, vx * 1.4));
       const tiltX = Math.max(-12, Math.min(12, -vy * 1.1));
-      cardEl.style.transform = `translate3d(${(pose.x - 140).toFixed(1)}px, ${(pose.y - 10).toFixed(1)}px, 0) rotate(${pose.angleDeg.toFixed(2)}deg) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`;
+      const scale = Math.min(1, Math.max(0.58, rect.width / 435));
+      cardEl.style.transform = `translate3d(${pose.x - 140}px, ${pose.y - 10}px, 0) rotate(${pose.angleDeg}deg) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale(${scale})`;
+      gl?.draw(cardEl.dataset.flipped === "true", elapsed);
 
-      // Draw reactive monochrome particle halo centered around the hanging badge
       if (haloCanvas && haloCtx) {
         const dark = document.documentElement.dataset.theme === "dark";
         const fg = dark ? "rgba(236,236,233," : "rgba(28,28,28,";
         const accent = dark ? "rgba(224,106,74," : "rgba(176,58,30,";
-        const energy = Math.min(1.6, Math.hypot(vx, vy) * 0.12);
+        const energy = Math.min(1.6, Math.hypot(vx, vy, tail.z - tail.oldZ) * 0.12);
         const cx = pose.x;
         const cy = pose.y + 160;
 
@@ -136,6 +145,7 @@ export function LanyardStage() {
         haloCanvas.height = Math.max(200, Math.round(rect.height * haloDpr));
         haloCtx.setTransform(haloDpr, 0, 0, haloDpr, 0, 0);
       }
+      gl?.resize(rect.width, rect.height);
       if (reduced) {
         for (let i = 0; i < chain.nodes.length; i++) {
           chain.nodes[i].x = anchorX;
@@ -158,7 +168,14 @@ export function LanyardStage() {
     const ro = new ResizeObserver(remeasure);
     ro.observe(stage);
 
-    const tick = () => {
+    const tick = (now: number) => {
+      if (document.hidden) {
+        lastFrame = 0;
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      elapsed = lastFrame ? Math.min(0.028, (now - lastFrame) / 1000) : 1 / 60;
+      lastFrame = now;
       t += 0.025;
       if (!dragging) {
         stepVerletChain(chain, {
@@ -196,15 +213,18 @@ export function LanyardStage() {
     };
 
     const onDown = (ev: PointerEvent) => {
+      if (dragging || ev.button !== 0) return;
       rect = stage.getBoundingClientRect();
       const pt = toStage(ev.clientX, ev.clientY);
       const tail = chain.nodes[chain.nodes.length - 1];
       dragging = true;
+      dragPointer = ev.pointerId;
       moved = 0;
       dragOffsetX = tail.x - pt.x;
       dragOffsetY = tail.y - pt.y;
       lastX = pt.x;
       lastY = pt.y;
+      dragOriginY = pt.y;
       velX = 0;
       velY = 0;
       cardEl.classList.add("is-held");
@@ -217,7 +237,7 @@ export function LanyardStage() {
       const pt = toStage(ev.clientX, ev.clientY);
       ptrX = pt.x;
       ptrY = pt.y;
-      if (!dragging) return;
+      if (!dragging || ev.pointerId !== dragPointer) return;
       const nx = Math.max(90, Math.min(rect.width - 90, pt.x + dragOffsetX));
       const ny = Math.max(40, Math.min(rect.height - 160, pt.y + dragOffsetY));
       velX = (pt.x - lastX) * 0.75;
@@ -225,19 +245,21 @@ export function LanyardStage() {
       moved += Math.abs(pt.x - lastX) + Math.abs(pt.y - lastY);
       lastX = pt.x;
       lastY = pt.y;
-      pinTailToPoint(chain, nx, ny);
+      const depth = reduced ? 0 : Math.max(-80, Math.min(80, (pt.y - dragOriginY) * 0.45));
+      pinTailToPoint(chain, nx, ny, depth);
       if (reduced) paint();
     };
 
     const onUp = (ev: PointerEvent) => {
-      if (!dragging) return;
+      if (!dragging || ev.pointerId !== dragPointer) return;
       dragging = false;
       cardEl.classList.remove("is-held");
       try {
         if (cardEl.hasPointerCapture(ev.pointerId)) cardEl.releasePointerCapture(ev.pointerId);
       } catch {}
-      releaseTailWithImpulse(chain, velX, velY);
-      if (moved < 6) {
+      const tail = chain.nodes[chain.nodes.length - 1];
+      releaseTailWithImpulse(chain, velX, velY, tail.z - tail.oldZ);
+      if (ev.type === "pointerup" && moved < 6) {
         setFlipped((f) => !f);
       }
     };
@@ -247,9 +269,16 @@ export function LanyardStage() {
     cardEl.addEventListener("pointermove", onMove);
     cardEl.addEventListener("pointerup", onUp);
     cardEl.addEventListener("pointercancel", onUp);
+    const flipObserver = new MutationObserver(() => {
+      if (reduced) paint();
+    });
+    flipObserver.observe(cardEl, { attributes: true, attributeFilter: ["data-flipped"] });
 
     return () => {
       cancelAnimationFrame(raf);
+      flipObserver.disconnect();
+      gl?.dispose();
+      delete stage.dataset.glReady;
       ro.disconnect();
       stage.removeEventListener("pointermove", onStagePointer);
       cardEl.removeEventListener("pointerdown", onDown);
@@ -284,6 +313,7 @@ export function LanyardStage() {
 
       <div ref={stageRef} className="lanyard__stage">
         <canvas ref={haloRef} className="lanyard__halo" aria-hidden="true" />
+        <canvas ref={glRef} className="lanyard__gl" aria-hidden="true" />
         <div className="lanyard__anchor" aria-hidden="true">
           <span className="lanyard__rivet" />
           <span className="text-mono-sm u-muted">CLAMP::TOP</span>
@@ -310,7 +340,6 @@ export function LanyardStage() {
         >
           <div className="lanyard__clip" aria-hidden="true" />
           <div className="lanyard__flipper">
-            {/* FRONT */}
             <div className="lanyard__face lanyard__front">
               <div className="lanyard__fhead text-mono-sm">
                 <span>KIHURN STUDIO</span>
@@ -365,7 +394,6 @@ export function LanyardStage() {
               </svg>
             </div>
 
-            {/* BACK */}
             <div className="lanyard__face lanyard__back">
               <div className="lanyard__fhead text-mono-sm">
                 <span>PRESS MANIFEST</span>

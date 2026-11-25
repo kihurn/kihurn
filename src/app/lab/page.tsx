@@ -8,6 +8,8 @@ import { LabWheel, type LabItem } from "@/components/lab/LabWheel";
 import { BookCard, ChatPath } from "@/components/lab/Parts";
 import { experiments } from "@/content/experiments";
 import { projects } from "@/content/projects";
+import { media } from "@/data/media";
+import { availableMedia } from "@/lib/server/media";
 import { LENS_LABEL, getEcosystemGraph, projectHref, projectTag, wheelOrder } from "@/lib/projects";
 
 export const metadata: Metadata = {
@@ -26,6 +28,11 @@ const experimentItems: LabItem[] = experiments.map((exp) => ({
   kind: "experiment",
 }));
 
+const photos = Object.fromEntries(projects.map((p) => [
+  p.slug,
+  p.status === "internal" ? undefined : availableMedia(media.projects[p.slug]),
+]));
+
 const projectItems: LabItem[] = wheelOrder(projects).map((p) => ({
   slug: p.slug,
   name: p.name,
@@ -35,6 +42,7 @@ const projectItems: LabItem[] = wheelOrder(projects).map((p) => ({
   year: p.finishedOn && /^\d{4}/.test(p.finishedOn) ? p.finishedOn.slice(0, 4) : p.status === "building" ? "WIP" : "LIVE",
   summary: p.summary,
   kind: "project",
+  photo: photos[p.slug],
 }));
 
 const labItems: LabItem[] = [...experimentItems, ...projectItems];
@@ -66,7 +74,7 @@ export default function LabPage() {
         </section>
 
         <ChatPath />
-        <LabBrowser projects={projects} />
+        <LabBrowser projects={projects} photos={photos} />
 
         <section className="lab-sec" aria-labelledby="exp-h">
           <h2 id="exp-h" className="lab-sec__title text-label">

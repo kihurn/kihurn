@@ -5,20 +5,20 @@ export interface Project {
   slug: string;
   name: string;
   summary: string;
-  repo?: string; // "owner/name"
-  live?: string; // full https URL
+  repo?: string;
+  live?: string;
   status: Status;
   lenses: Lens[];
   stack: string[];
   myPart: string;
   teamPart?: string;
-  uses: string[]; // slugs this project depends on (ecosystem edges)
-  ecosystem: boolean; // drawn as a live node on the Lab map
+  uses: string[];
+  ecosystem: boolean;
   showOnHome: boolean;
   featured: boolean;
   caseStudy: boolean;
-  finishedOn?: string; // "YYYY-MM"; the string for unknown dates is set in content
-  tags?: string[]; // e.g. "SHIPPED", "DEMO", "INTERNAL", "WIP"
+  finishedOn?: string;
+  tags?: string[];
 }
 
 export interface NowLine {

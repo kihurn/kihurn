@@ -1,4 +1,3 @@
-// Local stand-in for api.github.com that always fails, to prove Home survives it.
 import { createServer } from "node:http";
 
 createServer((_req, res) => {

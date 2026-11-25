@@ -32,7 +32,6 @@ test("clicking the Otto node scrolls its entry into view", async ({ page }) => {
 test("on phones the map is a vertical stack", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mobile only");
   await page.goto("/lab");
-  // nodes in reading (DOM) order must run strictly top to bottom
   const nodes = await page.locator("[data-eco-node]").all();
   expect(nodes).toHaveLength(graph.nodes.length);
   const ys: number[] = [];

@@ -8,8 +8,8 @@ test("typing a name updates the stub", async ({ page }) => {
   await page.getByLabel("Your name").fill("Ada Lovelace");
   await expect(page.locator("[data-stub-name]")).toHaveText("Ada Lovelace");
   await expect(page.locator("[data-stub-status]")).toHaveText("BEING WRITTEN");
-  await page.getByLabel("Freelance project").check();
-  await expect(page.locator("[data-stub-type]")).toHaveText("FREELANCE PROJECT");
+  await page.getByLabel("Freelance").check();
+  await expect(page.locator("[data-stub-type]")).toHaveText("FREELANCE");
 });
 
 test("an empty message shows the field error and moves focus to it", async ({ page }) => {
@@ -20,7 +20,7 @@ test("an empty message shows the field error and moves focus to it", async ({ pa
   await hydrated(page);
   await page.getByLabel("Your name").fill("Ada");
   await page.getByLabel("Your email").fill("ada@example.com");
-  await page.getByRole("button", { name: "Send ticket" }).click();
+  await page.getByRole("button", { name: "Send it" }).click();
   await expect(page.locator(".ticket").getByRole("alert")).toContainText("Write between 10 and 2000");
   await expect(page.getByLabel("Message")).toBeFocused();
 });
@@ -32,7 +32,7 @@ test("a successful send shows IN QUEUE and the download button", async ({ page }
   await page.getByLabel("Your name").fill("Ada");
   await page.getByLabel("Your email").fill("ada@example.com");
   await page.getByLabel("Message").fill("Hello Ki Hurn, this is a test ticket.");
-  await page.getByRole("button", { name: "Send ticket" }).click();
+  await page.getByRole("button", { name: "Send it" }).click();
   await expect(page.locator("[data-stub-status]")).toHaveText("IN QUEUE");
   await expect(page.locator("[data-stub-no]")).toHaveText("KH-261124-ABCD");
   await expect(page.getByRole("button", { name: "Download your stub" })).toBeVisible();
@@ -47,7 +47,7 @@ test("a failed send shows the direct email fallback", async ({ page }) => {
   await page.getByLabel("Your name").fill("Ada");
   await page.getByLabel("Your email").fill("ada@example.com");
   await page.getByLabel("Message").fill("Hello Ki Hurn, this is a test ticket.");
-  await page.getByRole("button", { name: "Send ticket" }).click();
+  await page.getByRole("button", { name: "Send it" }).click();
   await expect(page.locator(".ticket").getByRole("alert")).toContainText("wongkihurn2005@gmail.com");
 });
 

@@ -8,11 +8,6 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
 }
 
-/**
- * The AI ecosystem map. Live nodes link to their entry; in-progress nodes are greyed and
- * inert. Edges are drawn only where a README confirms the link. On phones the same nodes
- * stack vertically and each one says what it uses.
- */
 export function EcosystemMap({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
   const placed = layoutGraph(nodes, edges);
   const byslug = new Map(placed.map((n) => [n.slug, n]));

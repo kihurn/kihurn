@@ -13,7 +13,6 @@ const VERDICT_TEXT: Record<Verdict, string> = {
   "no-match": "No match. Different person.",
 };
 
-/** Everything here runs in the browser. face-api.js is imported only after "Start camera". */
 export function FaceDemo() {
   const [phase, setPhase] = useState<Phase>("closed");
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +152,6 @@ export function FaceDemo() {
       ) : null}
       {fallback ? (
         <figure className="face__fallback">
-          {/* TODO: record a short screen capture of the real demo and set src */}
           <video controls preload="none" data-face-fallback>
             <track kind="captions" />
           </video>

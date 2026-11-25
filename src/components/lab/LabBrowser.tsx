@@ -13,7 +13,7 @@ const LENSES: { id: Lens | "all"; label: string }[] = [
   { id: "security", label: "Security" },
 ];
 
-function Entry({ p }: { p: Project }) {
+function Entry({ p, photo }: { p: Project; photo?: string }) {
   const internal = p.status === "internal";
   return (
     <article id={p.slug} className="pentry">
@@ -32,7 +32,7 @@ function Entry({ p }: { p: Project }) {
           ))}
         </ul>
       </header>
-      <ShotSlot internal={internal} slug={p.slug} name={p.name} />
+      <ShotSlot internal={internal} slug={p.slug} name={p.name} photo={photo} />
       <p className="pentry__summary text-body">{p.summary}</p>
       <dl className="pentry__parts">
         <div>
@@ -58,7 +58,7 @@ function Entry({ p }: { p: Project }) {
   );
 }
 
-export function LabBrowser({ projects }: { projects: Project[] }) {
+export function LabBrowser({ projects, photos }: { projects: Project[]; photos: Record<string, string | undefined> }) {
   const [lens, setLens] = useState<Lens | "all">("all");
   const shown = filterByLens(projects, lens);
   const finished = shown.filter((p) => p.status === "done" || p.status === "internal");
@@ -87,7 +87,7 @@ export function LabBrowser({ projects }: { projects: Project[] }) {
           </h2>
           <div className="entries">
             {finished.map((p) => (
-              <Entry key={p.slug} p={p} />
+              <Entry key={p.slug} p={p} photo={photos[p.slug]} />
             ))}
           </div>
         </section>
@@ -100,7 +100,7 @@ export function LabBrowser({ projects }: { projects: Project[] }) {
           </h2>
           <div className="entries">
             {inProgress.map((p) => (
-              <Entry key={p.slug} p={p} />
+              <Entry key={p.slug} p={p} photo={photos[p.slug]} />
             ))}
           </div>
         </section>
