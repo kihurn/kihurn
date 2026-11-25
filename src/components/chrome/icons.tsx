@@ -29,5 +29,34 @@ export const SunIcon = ({ className }: { className?: string }) => (
 export const MoonIcon = ({ className }: { className?: string }) => (
   <Icon className={className} d="M21.248 11.811a6.5 6.5 0 0 1-9.06-9.06L12 2.75a9.25 9.25 0 1 0 9.248 9.061" />
 );
+export const MonitorIcon = ({ className }: { className?: string }) => (
+  <Icon
+    className={className}
+    d={[
+      "M4.75 4.75h14.5a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2H4.75a2 2 0 0 1-2-2v-8.5a2 2 0 0 1 2-2Z",
+      "M8.25 20.25h7.5",
+      "M12 17.25v3",
+    ]}
+  />
+);
+export const CopyIcon = ({ className }: { className?: string }) => (
+  <Icon
+    className={className}
+    d={[
+      "M8.75 8.75V5.75a2 2 0 0 1 2-2h7.5a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-3",
+      "M5.75 8.75h7.5a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-7.5a2 2 0 0 1-2-2v-7.5a2 2 0 0 1 2-2Z",
+    ]}
+  />
+);
+export const TerminalIcon = ({ className }: { className?: string }) => (
+  <Icon
+    className={className}
+    d={[
+      "M4.75 5.75h14.5a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H4.75a1.5 1.5 0 0 1-1.5-1.5v-9.5a1.5 1.5 0 0 1 1.5-1.5Z",
+      "m7.75 10 2.25 2-2.25 2",
+      "M12.25 14h3.5",
+    ]}
+  />
+);
 export const ArrowRightIcon = ({ className }: { className?: string }) => <Icon className={className} d="M14 5.75 20.25 12 14 18.25M19.5 12H3.75" />;
 export const ArrowUpRightIcon = ({ className }: { className?: string }) => <Icon className={className} d="M18.25 15.25V5.75M18.25 5.75H8.75M18.25 5.75L6 18" />;

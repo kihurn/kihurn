@@ -28,6 +28,8 @@ function wheelItems(ps: Project[]): WheelItem[] {
     name: p.name,
     tag: projectTag(p),
     lens: LENS_LABEL[p.lenses[0]] ?? "",
+    role: p.teamPart ? "LEAD / TEAM" : "SOLO BUILD",
+    year: p.finishedOn && /^\d{4}/.test(p.finishedOn) ? p.finishedOn.slice(0, 4) : "2026",
     href: projectHref(p),
     photo: `/placeholder/shot-${p.slug}.svg`,
     plate: `/placeholder/plate-${p.slug}.svg`,
@@ -42,7 +44,7 @@ export default async function Home() {
     <main id="main" className="home">
       <ProjectWheels items={wheelItems(projects)} />
 
-      <div className="home__rest">
+      <div id="home-index" className="home__rest">
         <section className="hero" aria-label="Introduction">
           <p className="hero__name text-display" aria-hidden="true">
             {site.name}

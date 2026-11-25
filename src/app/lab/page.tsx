@@ -1,26 +1,43 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "../../styles/lab-wheel.css";
 import "../../styles/lab.css";
 import { EcosystemMap } from "@/components/lab/EcosystemMap";
 import { LabBrowser } from "@/components/lab/LabBrowser";
 import { LabWheel, type LabItem } from "@/components/lab/LabWheel";
 import { BookCard, ChatPath } from "@/components/lab/Parts";
+import { experiments } from "@/content/experiments";
 import { projects } from "@/content/projects";
 import { LENS_LABEL, getEcosystemGraph, projectHref, projectTag, wheelOrder } from "@/lib/projects";
 
 export const metadata: Metadata = {
   title: "Lab",
-  description: "Everything Ki Hurn has built, led by a map of how his AI projects connect.",
+  description: "Interactive shaders, physics experiments, and everything Ki Hurn has built.",
 };
 
-const labItems: LabItem[] = wheelOrder(projects).map((p) => ({
+const experimentItems: LabItem[] = experiments.map((exp) => ({
+  slug: exp.slug,
+  name: exp.title,
+  tag: exp.engine,
+  pill: `EXP::${exp.index}`,
+  href: `/lab/${exp.slug}`,
+  year: exp.year,
+  summary: exp.subtitle,
+  kind: "experiment",
+}));
+
+const projectItems: LabItem[] = wheelOrder(projects).map((p) => ({
   slug: p.slug,
   name: p.name,
-  tag: LENS_LABEL[p.lenses[0]] ?? "",
+  tag: LENS_LABEL[p.lenses[0]] ?? "SYSTEMS",
   pill: projectTag(p),
   href: projectHref(p),
-  poster: `/placeholder/shot-${p.slug}.svg`,
+  year: p.finishedOn && /^\d{4}/.test(p.finishedOn) ? p.finishedOn.slice(0, 4) : p.status === "building" ? "WIP" : "LIVE",
+  summary: p.summary,
+  kind: "project",
 }));
+
+const labItems: LabItem[] = [...experimentItems, ...projectItems];
 
 export default function LabPage() {
   const { nodes, edges } = getEcosystemGraph(projects);
@@ -50,6 +67,27 @@ export default function LabPage() {
 
         <ChatPath />
         <LabBrowser projects={projects} />
+
+        <section className="lab-sec" aria-labelledby="exp-h">
+          <h2 id="exp-h" className="lab-sec__title text-label">
+            Motion &amp; shader workbench (01–04)
+          </h2>
+          <ul className="exp-shelf" data-row-list>
+            {experiments.map((exp) => (
+              <li key={exp.slug}>
+                <Link href={`/lab/${exp.slug}`} className="exp-shelf__card">
+                  <div className="exp-shelf__top text-mono-sm u-muted">
+                    <span>EXP::{exp.index}</span>
+                    <span>{exp.engine}</span>
+                  </div>
+                  <h3 className="text-h5">{exp.title}</h3>
+                  <p className="text-body-sm u-muted">{exp.subtitle}</p>
+                  <span className="exp-shelf__cta text-mono-sm">OPEN STAGE →</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <section className="lab-sec" aria-labelledby="book-h">
           <h2 id="book-h" className="lab-sec__title text-label">

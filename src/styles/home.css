@@ -69,5 +69,21 @@
 .cta__link:hover,.cta__link:focus-visible{text-decoration:underline}
 
 
-/* wheel over the stage must still reach the page */
-.hv2__stage{overscroll-behavior:auto}
+/* wheel over the stage must still reach the page; controls stay strictly inside 100svh stage */
+.hv2{position:relative;isolation:isolate}
+.hv2__stage{overscroll-behavior:auto;position:relative;height:100svh;min-height:36rem;overflow:clip;isolation:isolate}
+.hv2__glcanvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
+.hv2__center{display:flex;flex-direction:column;align-items:center;gap:var(--s-10)}
+.hv2__stage.is-stacked .hv2__center{top:70%}
+.hv2__eyebrow{margin:0}
+.hv2__title{line-height:1.15;padding-block:.06em;margin:0}
+.hv2__chips{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s-8)}
+.hv2__ch{margin-block:-.18em;padding-block:.18em}
+.hv2__meta{margin:var(--s-2) 0 0;text-transform:uppercase;letter-spacing:.06em}
+.hv2__ctarow{margin-top:var(--s-8);pointer-events:auto}
+.hv2__toolbar{position:absolute;inset-block-end:var(--s-20);inset-inline:var(--margin);z-index:4;display:flex;justify-content:flex-end;align-items:center;gap:var(--s-12);pointer-events:none}
+.hv2__stepper{display:flex;gap:var(--s-8)}
+.hv2__toolbtn{pointer-events:auto;cursor:pointer;border:1px solid var(--line);background:var(--chrome-bg);color:var(--ink)}
+.hv2__toolbtn:hover,.hv2__toolbtn:focus-visible{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.hv2__classic-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--s-16)}
+

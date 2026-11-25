@@ -2,27 +2,44 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import "../../../styles/lab.css";
+import { ExperimentWorkbench } from "@/components/lab/ExperimentWorkbench";
 import { FaceDemo } from "@/components/lab/FaceDemo";
-import { Flow, ProjectLinks } from "@/components/lab/Parts";
+import { Flow, ProjectLinks, ShotSlot } from "@/components/lab/Parts";
 import { caseStudies } from "@/content/caseStudies";
+import { experiments, isExperimentSlug } from "@/content/experiments";
 import { projects } from "@/content/projects";
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return projects.filter((p) => p.caseStudy && caseStudies[p.slug]).map((p) => ({ slug: p.slug }));
+  const caseParams = projects.filter((p) => p.caseStudy && caseStudies[p.slug]).map((p) => ({ slug: p.slug }));
+  const expParams = experiments.map((e) => ({ slug: e.slug }));
+  return [...caseParams, ...expParams];
 }
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
+  if (isExperimentSlug(slug)) {
+    const exp = experiments.find((e) => e.slug === slug);
+    return exp ? { title: `${exp.title} · Lab`, description: exp.subtitle } : {};
+  }
   const p = projects.find((x) => x.slug === slug);
   return p ? { title: p.name, description: p.summary.slice(0, 160) } : {};
 }
 
-export default async function CaseStudyPage({ params }: Params) {
+export default async function LabDetailPage({ params }: Params) {
   const { slug } = await params;
+
+  if (isExperimentSlug(slug)) {
+    const idx = experiments.findIndex((e) => e.slug === slug);
+    const spec = experiments[idx];
+    const prev = idx > 0 ? experiments[idx - 1] : null;
+    const next = idx < experiments.length - 1 ? experiments[idx + 1] : null;
+    return <ExperimentWorkbench spec={spec} prev={prev} next={next} />;
+  }
+
   const p = projects.find((x) => x.slug === slug && x.caseStudy);
   const cs = caseStudies[slug];
   if (!p || !cs) notFound();
@@ -67,7 +84,7 @@ export default async function CaseStudyPage({ params }: Params) {
       <section className="lab-sec" aria-labelledby="cs-how">
         <h2 id="cs-how" className="lab-sec__title text-label">How it works</h2>
         {cs.flow.length > 0 ? <Flow steps={cs.flow} label={`How ${p.name} works`} /> : null}
-        {cs.diagramTodo ? <p className="shot shot--blur"><span className="shot__t text-mono-meta">{cs.diagramTodo}</span></p> : null}
+        {cs.diagramTodo ? <ShotSlot internal={p.status === "internal"} slug={p.slug} name={p.name} /> : null}
         {cs.how.map((para) => (
           <p key={para} className="text-body">{para}</p>
         ))}

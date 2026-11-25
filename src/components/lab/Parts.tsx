@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Project } from "@/content/types";
+import { LabMiniStage } from "./LabMiniStage";
 
 /** Ordered steps drawn as boxes joined by arrows. Reads top to bottom on a phone. */
 export function Flow({ steps, label }: { steps: string[]; label: string }) {
@@ -51,11 +52,26 @@ export function BookCard() {
   );
 }
 
-/** Where a project's screenshot will go. Internal work keeps it blurred on purpose. */
-export function ShotSlot({ internal }: { internal: boolean }) {
+/** Procedural monochrome architecture diagram replacing TODO screenshot placeholders. Internal work adds a classified overlay bar. */
+export function ShotSlot({
+  internal,
+  slug = "c0re",
+  name = "Architecture schematic",
+}: {
+  internal: boolean;
+  slug?: string;
+  name?: string;
+}) {
   return (
-    <div className={`shot${internal ? " shot--blur" : ""}`} role="img" aria-label={internal ? "TODO: redacted screenshot" : "TODO: screenshot"}>
-      <span className="shot__t text-mono-meta">TODO: {internal ? "redacted screenshot" : "screenshot"}</span>
+    <div
+      className={`shot${internal ? " shot--blur" : ""}`}
+      role="img"
+      aria-label={internal ? `${name} classified topology diagram` : `${name} architectural schematic`}
+    >
+      <LabMiniStage slug={slug} interactive={false} className="shot__canvas" />
+      <span className="shot__t text-mono-meta">
+        {internal ? "TOPOLOGY::REDACTED // INTERNAL" : `SCHEMATIC::${slug.toUpperCase()}`}
+      </span>
     </div>
   );
 }

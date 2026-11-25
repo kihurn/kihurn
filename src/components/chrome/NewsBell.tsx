@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { news } from "@/content/news";
-import { ArrowUpRightIcon } from "./icons";
+import { ArrowRightIcon, ArrowUpRightIcon } from "./icons";
 
 function when(date: string): string {
   if (date === "TODO") return "TODO:";
@@ -13,16 +14,16 @@ function when(date: string): string {
   }).format(d);
 }
 
-/** The "What's new" panel (the bell button lives in Header). */
+/** The "What's new" drawer (the bell button lives in Header). */
 export function NewsPanel() {
   const items = [...news]
     .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0))
-    .slice(0, 5);
+    .slice(0, 6);
   return (
     <div className="notif" id="notif" data-notif aria-hidden="true">
       <div className="notif__panel" role="dialog" aria-modal="true" aria-label="What’s new">
         <div className="notif__head">
-          <p className="notif__title text-label">What’s new</p>
+          <p className="notif__title text-label">LOG::UPDATES</p>
           <span className="notif__count text-meta" data-notif-count hidden />
           <button className="notif__clear text-meta" type="button" data-notif-clear hidden>Mark all read</button>
         </div>
@@ -46,13 +47,19 @@ export function NewsPanel() {
                 </>
               );
               return n.href ? (
-                <a key={n.title} data-date={n.date} href={n.href} className="notif__item notif__item--link">{inner}</a>
+                <Link key={n.title} data-date={n.date} href={n.href} className="notif__item notif__item--link">{inner}</Link>
               ) : (
                 <div key={n.title} data-date={n.date} className="notif__item">{inner}</div>
               );
             })}
           </div>
           <div className="notif__fade notif__fade--bottom" aria-hidden="true" />
+        </div>
+        <div className="notif__footer">
+          <Link className="notif__all text-mono-meta" href="/changelog">
+            <span>View changelog</span>
+            <ArrowRightIcon />
+          </Link>
         </div>
       </div>
     </div>

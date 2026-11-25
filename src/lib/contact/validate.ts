@@ -11,6 +11,7 @@ export interface Ticket {
   name: string;
   email: string;
   message: string;
+  signature?: string;
 }
 export type TicketResult = { ok: true; ticket: Ticket } | { ok: false; field: string; error: string };
 
@@ -31,5 +32,12 @@ export function validateTicket(body: unknown): TicketResult {
   const message = typeof b.message === "string" ? b.message.trim() : "";
   if (message.length < 10 || message.length > 2000)
     return { ok: false, field: "message", error: "Write between 10 and 2000 characters." };
-  return { ok: true, ticket: { type, name, email, message } };
+  let signature: string | undefined;
+  if (typeof b.signature === "string" && b.signature.length > 0) {
+    if (!b.signature.startsWith("data:image/png;base64,") || b.signature.length > 250_000) {
+      return { ok: false, field: "signature", error: "Signature image is invalid or too large." };
+    }
+    signature = b.signature;
+  }
+  return { ok: true, ticket: signature ? { type, name, email, message, signature } : { type, name, email, message } };
 }

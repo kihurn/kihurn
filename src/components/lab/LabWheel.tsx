@@ -1,25 +1,25 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-
-type Mode = "flat" | "wheel" | "grid";
+import { LabMiniStage } from "@/components/lab/LabMiniStage";
+import { useScrambleText } from "@/hooks/useScrambleText";
+import { normalizeLabMode, type LabViewMode } from "@/lib/labSchematics";
 
 export interface LabItem {
   slug: string;
   name: string;
-  /** first chip, e.g. FULL STACK */
+  /** primary lens / engine, e.g. THREE.JS + GLSL or FULL STACK */
   tag: string;
-  /** second chip, e.g. SHIPPED */
+  /** badge pill, e.g. EXP::01 or SHIPPED */
   pill: string;
   href: string;
-  poster: string;
+  year: string;
+  summary: string;
+  kind: "experiment" | "project";
 }
 
-const COLS = 6;
-const GRID_GAP = 24;
-const WHEEL_STEP = 0.2; // radians per row
-
-
+const WHEEL_STEP = 0.175;
 const wrap = (v: number, n: number) => ((v % n) + n) % n;
 const wrapHalf = (v: number, n: number) => wrap(v + n / 2, n) - n / 2;
 
@@ -48,33 +48,29 @@ function Chips({ e }: { e: LabItem }) {
 
 export function LabWheel({ items }: { items: LabItem[] }) {
   const N = items.length;
-  const [mode, setMode] = useState<Mode>("wheel");
+  const [mode, setMode] = useState<LabViewMode>("wheel");
   const [active, setActive] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
-  const modeRef = useRef<Mode>("wheel");
+  const modeRef = useRef<LabViewMode>("wheel");
   const activeRef = useRef(0);
   const sim = useRef({
     pos: 0,
     target: 0,
-    wheelP: 1,
-    gridP: 0,
-    panX: 0,
-    panY: 0,
-    panTX: 0,
-    panTY: 0,
     dragging: false,
     moved: 0,
   });
 
-  // restore the saved view mode
+  // Hydrate persisted lab-mode in RAF to avoid synchronous setState in effect
   useEffect(() => {
-    try {
-      const m = localStorage.getItem("lab-mode");
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only persisted preference
-      if (m === "flat" || m === "wheel" || m === "grid") setMode(m);
-    } catch {}
+    const id = requestAnimationFrame(() => {
+      try {
+        const stored = localStorage.getItem("lab-mode");
+        if (stored) setMode(normalizeLabMode(stored));
+      } catch {}
+    });
+    return () => cancelAnimationFrame(id);
   }, []);
 
   useEffect(() => {
@@ -85,73 +81,52 @@ export function LabWheel({ items }: { items: LabItem[] }) {
   }, [mode]);
 
   useEffect(() => {
-    const section = sectionRef.current!;
-    const viewport = viewportRef.current!;
+    const section = sectionRef.current;
+    const viewport = viewportRef.current;
+    if (!section || !viewport) return;
     const s = sim.current;
     section.setAttribute("data-lab-enhanced", "");
+
     let raf = 0;
-    let rowH = 72;
-    let W = 0;
-    let H = 0;
-    let inset = 0;
-    let cardW = 256;
-    let cardH = 220;
+    let rowH = 68;
+    let H = 640;
 
     const measure = () => {
       const vr = viewport.getBoundingClientRect();
-      W = vr.width;
-      H = vr.height;
+      H = Math.max(420, vr.height);
       const first = itemRefs.current[0];
       const face = first?.querySelector<HTMLElement>(".lab__row-face");
-      rowH = (face ? face.offsetHeight : 64) + 14;
-      inset = parseFloat(getComputedStyle(first ?? section).insetInlineStart) || 24;
-      cardW = Math.max(140, (W - inset * 2 - GRID_GAP * (COLS - 1)) / COLS);
-      cardH = cardW * 0.75 + 28;
-      section.style.setProperty("--lab-card-w", `${cardW}px`);
-      section.style.setProperty("--lab-card-h", `${cardH}px`);
+      rowH = (face ? face.offsetHeight : 58) + 16;
     };
 
     const frame = () => {
-      const m = modeRef.current;
-      s.pos += (s.target - s.pos) * 0.12;
-      s.wheelP += ((m === "flat" ? 0 : 1) - s.wheelP) * 0.14;
-      s.gridP += ((m === "grid" ? 1 : 0) - s.gridP) * 0.14;
-      s.panX += (s.panTX - s.panX) * 0.14;
-      s.panY += (s.panTY - s.panY) * 0.14;
+      if (modeRef.current === "wheel") {
+        s.pos += (s.target - s.pos) * 0.13;
+        const centerY = H * 0.52 - rowH / 2;
 
-      const gridW = COLS * (cardW + GRID_GAP);
-      const rowsInGrid = Math.ceil(N / COLS);
-      const gridH = rowsInGrid * (cardH + GRID_GAP);
+        itemRefs.current.forEach((el, i) => {
+          if (!el) return;
+          const off = wrapHalf(i - s.pos, N);
+          const angle = off * WHEEL_STEP;
+          const lx = 42 - 9.5 * off * off;
+          const ly = centerY + off * rowH * 0.96;
+          const deg = (angle * 180) / Math.PI;
+          // Fade out before reaching top header bar or bottom mode pill
+          const topFade = ly < 116 ? Math.max(0, (ly - 68) / 48) : 1;
+          const bottomFade = ly > H - 155 ? Math.max(0, (H - 85 - ly) / 70) : 1;
+          const distFade = Math.max(0, 1 - Math.abs(off) * 0.19);
+          const op = Math.min(distFade, topFade, bottomFade);
 
-      itemRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const off = wrapHalf(i - s.pos, N);
-        // list / wheel layout
-        const a = off * WHEEL_STEP * s.wheelP;
-        const lx = (56 - 8 * off * off) * s.wheelP;
-        const ly = H * (0.5 + 0.1 * s.wheelP) - rowH / 2 + off * rowH * (1 - 0.04 * s.wheelP);
-        const lr = (a * 180) / Math.PI;
-        const lo = Math.max(0, 1 - Math.abs(off) * (0.09 + 0.05 * s.wheelP));
-        // grid layout (one tile per item, wrapped onto a torus)
-        const col = i % COLS;
-        const row = Math.floor(i / COLS);
-        const bx = inset + col * (cardW + GRID_GAP) + s.panX;
-        const by = 96 + row * (cardH + GRID_GAP) + s.panY;
-        const gx = wrap(bx - inset + cardW, gridW) - cardW + inset;
-        const gy = wrap(by + cardH, Math.max(gridH, H + cardH)) - cardH;
-        const p = s.gridP;
-        const x = lx * (1 - p) + (gx - inset) * p;
-        const y = ly * (1 - p) + gy * p;
-        const r = lr * (1 - p);
-        el.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${r}deg)`;
-        el.style.opacity = String(lo * (1 - p) + p);
-        el.style.setProperty("--lab-grid-p", p.toFixed(3));
-      });
+          el.style.transform = `translate3d(${lx}px, ${ly}px, 0) rotate(${deg}deg)`;
+          el.style.opacity = op.toFixed(3);
+          el.style.pointerEvents = op > 0.12 ? "auto" : "none";
+        });
 
-      const nearest = wrap(Math.round(s.pos), N);
-      if (nearest !== activeRef.current) {
-        activeRef.current = nearest;
-        setActive(nearest);
+        const nearest = wrap(Math.round(s.pos), N);
+        if (nearest !== activeRef.current) {
+          activeRef.current = nearest;
+          setActive(nearest);
+        }
       }
       raf = requestAnimationFrame(frame);
     };
@@ -161,75 +136,72 @@ export function LabWheel({ items }: { items: LabItem[] }) {
     const ro = new ResizeObserver(measure);
     ro.observe(viewport);
 
-    // input: wheel, drag, keys
     const snap = () => {
-      if (modeRef.current !== "grid") s.target = Math.round(s.target);
+      if (modeRef.current === "wheel") s.target = Math.round(s.target);
     };
     let snapTimer = 0;
+
     const onWheel = (e: WheelEvent) => {
+      if (modeRef.current !== "wheel") return;
       const sideways = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
-      if (!sideways) return; // leave the page's own scrolling alone
+      if (!sideways) return;
       e.preventDefault();
-      if (modeRef.current === "grid") {
-        s.panTX -= e.deltaX;
-        s.panTY -= e.deltaY;
-        return;
-      }
-      s.target += (e.deltaX || e.deltaY) / (rowH * 1.6);
+      s.target += (e.deltaX || e.deltaY) / (rowH * 1.45);
       clearTimeout(snapTimer);
       snapTimer = window.setTimeout(snap, 120);
     };
-    let startX = 0;
-    let startY = 0;
-    let lastY = 0;
+
     let lastX = 0;
+    let lastY = 0;
     const onDown = (e: PointerEvent) => {
+      if (modeRef.current !== "wheel") return;
+      if ((e.target as HTMLElement).closest(".lab__preview, .lab__mode")) return;
       s.dragging = true;
       s.moved = 0;
-      startX = lastX = e.clientX;
-      startY = lastY = e.clientY;
-      if (e.pointerType !== "touch") viewport.setPointerCapture(e.pointerId);
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (e.pointerType !== "touch") {
+        try {
+          viewport.setPointerCapture(e.pointerId);
+        } catch {}
+      }
       section.setAttribute("data-lab-dragging", "");
     };
     const onMove = (e: PointerEvent) => {
-      if (!s.dragging) return;
+      if (!s.dragging || modeRef.current !== "wheel") return;
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX;
       lastY = e.clientY;
       const touch = e.pointerType === "touch";
       s.moved += Math.abs(dx) + Math.abs(dy);
-      if (modeRef.current === "grid") {
-        s.panTX += dx;
-        s.panTY += dy;
-      } else {
-        s.target -= (touch ? dx : dy) / rowH;
-      }
+      s.target -= (touch ? dx : dy) / rowH;
     };
     const onUp = (e: PointerEvent) => {
       if (!s.dragging) return;
       s.dragging = false;
       section.removeAttribute("data-lab-dragging");
-      if (viewport.hasPointerCapture(e.pointerId)) viewport.releasePointerCapture(e.pointerId);
+      try {
+        if (viewport.hasPointerCapture(e.pointerId)) viewport.releasePointerCapture(e.pointerId);
+      } catch {}
       snap();
-      void startX;
-      void startY;
     };
     const onKey = (e: KeyboardEvent) => {
+      if (modeRef.current !== "wheel") return;
       const t = e.target instanceof Element ? e.target : null;
       if (t && t.closest("input, textarea, dialog")) return;
       if (document.documentElement.classList.contains("is-overlay")) return;
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
         s.target = Math.round(s.target) + 1;
-      } else if (e.key === "ArrowLeft") {
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
         e.preventDefault();
         s.target = Math.round(s.target) - 1;
       }
     };
-    // swallow the click that ends a drag; in wheel/list mode a click on a
-    // non-active row brings it to the center first
+
     const onClickCapture = (e: MouseEvent) => {
+      if (modeRef.current !== "wheel") return;
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>(".lab__item");
       if (!a) return;
       if (s.moved > 6) {
@@ -237,13 +209,11 @@ export function LabWheel({ items }: { items: LabItem[] }) {
         e.stopPropagation();
         return;
       }
-      if (modeRef.current !== "grid") {
-        const i = itemRefs.current.indexOf(a);
-        if (i >= 0 && i !== activeRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-          s.target = Math.round(s.pos) + wrapHalf(i - s.pos, N);
-        }
+      const i = itemRefs.current.indexOf(a);
+      if (i >= 0 && i !== activeRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        s.target = Math.round(s.pos) + wrapHalf(i - s.pos, N);
       }
     };
 
@@ -268,10 +238,19 @@ export function LabWheel({ items }: { items: LabItem[] }) {
     };
   }, [N]);
 
-  const current = items[active];
+  const stepWheel = (dir: number) => {
+    sim.current.target = Math.round(sim.current.target) + dir;
+  };
 
-  const modes: Array<[Mode, string]> = [
-    ["flat", "List"],
+  const current = items[active] ?? items[0];
+  const scrambledTitle = useScrambleText(current.name, { durationMs: 360 });
+  const scrambledIndex = useScrambleText(
+    `${String(active + 1).padStart(2, "0")} / ${String(N).padStart(2, "0")}`,
+    { durationMs: 260 },
+  );
+
+  const modes: Array<[LabViewMode, string]> = [
+    ["list", "List"],
     ["wheel", "Wheel"],
     ["grid", "Grid"],
   ];
@@ -283,14 +262,19 @@ export function LabWheel({ items }: { items: LabItem[] }) {
         ref={sectionRef}
         className="lab bleed-full"
         data-lab
-        data-lab-cols={COLS}
         data-lab-mode={mode}
-        aria-label="Projects, as a wheel, a list or a grid"
+        aria-label="Lab index: experiments and builds"
       >
-        <div ref={viewportRef} className="lab__viewport" data-lab-viewport>
+        {/* WHEEL MODE: Curved left typography wheel + floating interactive right preview */}
+        <div
+          ref={viewportRef}
+          className="lab__viewport"
+          data-lab-viewport
+          hidden={mode !== "wheel"}
+        >
           <div className="lab__list" data-lab-list>
             {items.map((e, i) => (
-              <a
+              <Link
                 key={e.slug}
                 ref={(el) => {
                   itemRefs.current[i] = el;
@@ -302,6 +286,7 @@ export function LabWheel({ items }: { items: LabItem[] }) {
                 draggable={false}
               >
                 <span className="lab__row-face">
+                  <span className="lab__num text-mono-sm">{String(i + 1).padStart(2, "0")}</span>
                   <span className="lab__name">{e.name}</span>
                   <span className="lab__meta" aria-hidden="true">
                     <Chips e={e} />
@@ -317,31 +302,105 @@ export function LabWheel({ items }: { items: LabItem[] }) {
                     </span>
                   </span>
                 </span>
-                <span className="lab__card" aria-hidden="true">
-                  <span className="lab__card-media u-media">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="u-cover" src={e.poster} alt="" decoding="async" draggable={false} />
-                  </span>
-                  <span className="lab__card-cap">
-                    <span className="lab__card-name text-meta">{e.name}</span>
-                    <span className="lab__card-tags">
-                      <Chips e={e} />
-                    </span>
-                  </span>
-                </span>
-              </a>
+              </Link>
             ))}
           </div>
-          <div className="pblur pblur--top" style={{ "--pblur-h": "9em" } as React.CSSProperties} aria-hidden="true">
-            <div className="pblur__layer is--1" />
-            <div className="pblur__layer is--2" />
-            <div className="pblur__layer is--3" />
+
+          <aside className="lab__preview" aria-label="Selected lab entry preview">
+            <div className="lab__preview-bar text-mono-sm">
+              <span>N°{scrambledIndex.displayText}</span>
+              <span>{current.tag}</span>
+            </div>
+            <Link href={current.href} className="lab__preview-stage" aria-label={`Open ${current.name}`}>
+              <LabMiniStage slug={current.slug} interactive={true} />
+            </Link>
+            <div className="lab__preview-foot">
+              <div className="lab__preview-title-row">
+                <strong className="text-h5">{scrambledTitle.displayText}</strong>
+                <span className="chip text-meta chip--pill">{current.pill}</span>
+              </div>
+              <p className="lab__preview-summary text-body-sm u-muted">{current.summary}</p>
+              <Link href={current.href} className="lab__preview-cta text-mono-sm">
+                {current.kind === "experiment" ? "OPEN LIVE STAGE →" : "OPEN BUILD →"}
+              </Link>
+            </div>
+          </aside>
+        </div>
+
+        {/* GRID MODE: 3-column architectural grid with procedural canvases / schematics */}
+        {mode === "grid" ? (
+          <div className="lab__grid-wrap" data-lab-grid>
+            <div className="lab__grid-head">
+              <p className="text-mono-sm u-muted">LAB::ARCHIVE · {N} ENTRIES · PROCEDURAL SCHEMATICS</p>
+              <p className="text-body-sm u-muted">Experiments (01–04) animate on hover; builds display system blueprints.</p>
+            </div>
+            <div className="lab__grid">
+              {items.map((e, i) => (
+                <Link key={e.slug} href={e.href} className="lab__gcard">
+                  <div className="lab__gcard-top text-mono-sm u-muted">
+                    <span>N°{String(i + 1).padStart(2, "0")}</span>
+                    <span>{e.pill}</span>
+                  </div>
+                  <div className="lab__gcard-media">
+                    <LabMiniStage slug={e.slug} interactive={false} />
+                  </div>
+                  <div className="lab__gcard-body">
+                    <h2 className="lab__gcard-title text-h5">{e.name}</h2>
+                    <p className="lab__gcard-desc text-body-sm u-muted">{e.summary}</p>
+                  </div>
+                  <div className="lab__gcard-foot text-mono-sm">
+                    <span>{e.tag}</span>
+                    <span>{e.kind === "experiment" ? "STAGE →" : "OPEN →"}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="pblur pblur--bottom" style={{ "--pblur-h": "6em" } as React.CSSProperties} aria-hidden="true">
-            <div className="pblur__layer is--1" />
-            <div className="pblur__layer is--2" />
-            <div className="pblur__layer is--3" />
+        ) : null}
+
+        {/* LIST MODE: Compact archival index rows */}
+        {mode === "list" ? (
+          <div className="lab__table-wrap" data-lab-table>
+            <div className="lab__table-head text-mono-sm u-muted">
+              <span>N°</span>
+              <span>TITLE</span>
+              <span>CATEGORY</span>
+              <span>YEAR / TAG</span>
+              <span className="u-right">ACTION</span>
+            </div>
+            <ul className="lab__table" role="list">
+              {items.map((e, i) => (
+                <li key={e.slug}>
+                  <Link href={e.href} className="lab__trow">
+                    <span className="lab__trow-num text-mono-sm u-muted">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="lab__trow-name text-h5">{e.name}</span>
+                    <span className="lab__trow-tag text-mono-sm u-muted">{e.tag}</span>
+                    <span className="lab__trow-pill text-mono-sm">
+                      <span className="chip text-meta chip--pill">{e.pill}</span>
+                      <span className="u-muted">{e.year}</span>
+                    </span>
+                    <span className="lab__trow-go text-mono-sm">
+                      {e.kind === "experiment" ? "STAGE →" : "OPEN →"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
+        ) : null}
+
+        {/* Bottom docked switcher bar: stepper + LIST | WHEEL | GRID */}
+        <div className="lab__dock">
+          {mode === "wheel" ? (
+            <button
+              type="button"
+              className="lab__step text-mono-sm"
+              onClick={() => stepWheel(-1)}
+              aria-label="Previous project"
+            >
+              ‹
+            </button>
+          ) : null}
           <div className="lab__mode" role="group" aria-label="View mode" data-lab-mode-toggle>
             {modes.map(([m, label]) => (
               <button
@@ -356,10 +415,16 @@ export function LabWheel({ items }: { items: LabItem[] }) {
               </button>
             ))}
           </div>
-          <div className="lab__preview u-media" aria-hidden="true">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="lab__preview-img u-cover" src={current.poster} alt="" decoding="async" />
-          </div>
+          {mode === "wheel" ? (
+            <button
+              type="button"
+              className="lab__step text-mono-sm"
+              onClick={() => stepWheel(1)}
+              aria-label="Next project"
+            >
+              ›
+            </button>
+          ) : null}
         </div>
       </section>
     </>

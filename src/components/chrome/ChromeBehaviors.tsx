@@ -2,29 +2,57 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { site } from "@/content/site";
+import { getThemeMetaColor, normalizeThemeMode, resolveThemeMode, type ThemeMode } from "@/lib/chrome";
+import { dispatchTornNavigate } from "./RouteTransition";
+import { dispatchThemeBurst } from "./ThemeParticles";
 
-type Theme = "light" | "dark" | "system";
 type VTDocument = Document & { startViewTransition?: (cb: () => Promise<void> | void) => unknown };
 
-function resolveTheme(t: Theme): "light" | "dark" {
-  if (t === "system") return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  return t;
-}
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function applyTheme(t: Theme) {
-  const resolved = resolveTheme(t);
-  document.documentElement.dataset.theme = resolved;
+function syncThemeDom(t: ThemeMode) {
+  const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+  const resolved = resolveThemeMode(t, prefersLight);
+  const root = document.documentElement;
+  root.dataset.theme = resolved;
+  root.dataset.themeMode = t;
   try {
     localStorage.setItem("theme", t);
   } catch {}
   const fav = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (fav) fav.href = `/favicon-${resolved}.svg`;
+  const metaTheme = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.content = getThemeMetaColor(resolved);
+  document.querySelectorAll<HTMLElement>("[data-header], [data-statusbar]").forEach((el) => {
+    el.dataset.theme = resolved;
+    el.dataset.themeMode = t;
+  });
   document.querySelectorAll<HTMLElement>("[data-theme-set]").forEach((b) => {
-    const pressed = b.dataset.themeSet === resolved;
+    const pressed = b.dataset.themeSet === t;
     b.setAttribute("aria-pressed", String(pressed));
     const bg = document.querySelector<HTMLElement>("[data-theme-bg]");
     if (pressed && bg && bg.parentElement !== b) b.prepend(bg);
   });
+}
+
+function applyTheme(t: ThemeMode, animate = true, origin?: { x: number; y: number }) {
+  if (!animate || reducedMotion()) {
+    syncThemeDom(t);
+    return;
+  }
+  const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+  const targetResolved = resolveThemeMode(t, prefersLight);
+  dispatchThemeBurst({ x: origin?.x, y: origin?.y, resolved: targetResolved });
+
+  const doc = document as VTDocument;
+  if (doc.startViewTransition) {
+    doc.startViewTransition(() => syncThemeDom(t));
+  } else {
+    document.documentElement.classList.add("is-theming");
+    syncThemeDom(t);
+    window.setTimeout(() => document.documentElement.classList.remove("is-theming"), 360);
+  }
 }
 
 function splitRoll(el: HTMLElement) {
@@ -35,23 +63,22 @@ function splitRoll(el: HTMLElement) {
   [...text].forEach((ch, i) => {
     const s = document.createElement("span");
     s.style.setProperty("--index", String(i));
-    s.textContent = ch === " " ? " " : ch; // a bare space would collapse
+    s.textContent = ch === " " ? "\u00a0" : ch; // a bare space would collapse
     el.appendChild(s);
   });
 }
-
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function ChromeBehaviors() {
   const router = useRouter();
   const pathname = usePathname();
   const settle = useRef<(() => void) | null>(null);
 
-  // route change finished: release the view transition / fade
+  // route change finished: release the view transition / fade and roll any new labels
   useEffect(() => {
     settle.current?.();
     settle.current = null;
     document.documentElement.classList.remove("is-routing");
+    document.querySelectorAll<HTMLElement>("[data-roll]").forEach(splitRoll);
   }, [pathname]);
 
   useEffect(() => {
@@ -59,9 +86,9 @@ export function ChromeBehaviors() {
     const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
     const $$ = <T extends HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)];
     const cleanups: Array<() => void> = [];
-    root.dataset.hydrated = "true"; // lets tests (and anything else) know client code is live
+    root.dataset.hydrated = "true";
     const on = (
-      t: Document | HTMLElement | Window,
+      t: Document | HTMLElement | Window | MediaQueryList,
       type: string,
       fn: (e: Event) => void,
       opts?: AddEventListenerOptions,
@@ -70,32 +97,49 @@ export function ChromeBehaviors() {
       cleanups.push(() => t.removeEventListener(type, fn, opts));
     };
 
-    // ---- navigation with View Transitions (fade fallback, none when reduced) ----
+    let toastTimer = 0;
+    function showToast(msg: string) {
+      const toast = $("[data-hud-toast]");
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.hidden = false;
+      toast.classList.add("is-open");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => {
+        toast.classList.remove("is-open");
+        window.setTimeout(() => {
+          toast.hidden = true;
+        }, 200);
+      }, 2200);
+    }
+    cleanups.push(() => window.clearTimeout(toastTimer));
+
+    // ---- navigation with organic torn-paper wipe (bypass when reduced motion) ----
     function go(path: string) {
-      if (reducedMotion()) return router.push(path);
-      const doc = document as VTDocument;
-      if (doc.startViewTransition) {
-        doc.startViewTransition(
-          () =>
-            new Promise<void>((res) => {
-              settle.current = res;
-              setTimeout(res, 1000);
-              router.push(path);
-            }),
-        );
-      } else {
-        root.classList.add("is-routing");
-        setTimeout(() => router.push(path), 200);
+      if (reducedMotion()) {
+        router.push(path);
+        return;
       }
+      dispatchTornNavigate(path);
     }
 
     // ---- theme ----
-    let stored: Theme = "dark";
+    let stored: ThemeMode = "dark";
     try {
-      const s = localStorage.getItem("theme");
-      if (s === "light" || s === "dark" || s === "system") stored = s;
+      stored = normalizeThemeMode(localStorage.getItem("theme"));
     } catch {}
-    applyTheme(stored);
+    syncThemeDom(stored);
+
+    const mqLight = window.matchMedia("(prefers-color-scheme: light)");
+    on(mqLight, "change", () => {
+      if (root.dataset.themeMode === "system") syncThemeDom("system");
+    });
+
+    // ---- telemetry overlay toggle ----
+    try {
+      const tel = localStorage.getItem("telemetry");
+      if (tel === "hidden") root.dataset.telemetry = "hidden";
+    } catch {}
 
     $$("[data-roll]").forEach(splitRoll);
 
@@ -159,12 +203,41 @@ export function ChromeBehaviors() {
       filter();
       setTimeout(() => input.focus(), 30);
     }
+    async function copyText(text: string, label: string) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(`COPIED:: ${label}`);
+      } catch {
+        showToast(`CLIPBOARD:: UNAVAILABLE`);
+      }
+    }
     function run(it: HTMLElement) {
       const action = it.dataset.action;
       const href = it.dataset.href;
       closeAll();
-      if (action === "theme:toggle") applyTheme(root.dataset.theme === "light" ? "dark" : "light");
-      else if (href) {
+      if (action === "theme:toggle") {
+        applyTheme(root.dataset.theme === "light" ? "dark" : "light");
+      } else if (action === "theme:light") {
+        applyTheme("light");
+        showToast("THEME:: PAPER STOCK");
+      } else if (action === "theme:dark") {
+        applyTheme("dark");
+        showToast("THEME:: CHARCOAL INK");
+      } else if (action === "theme:system") {
+        applyTheme("system");
+        showToast("THEME:: SYSTEM");
+      } else if (action === "telemetry:toggle") {
+        const nextHidden = root.dataset.telemetry !== "hidden";
+        root.dataset.telemetry = nextHidden ? "hidden" : "visible";
+        try {
+          localStorage.setItem("telemetry", root.dataset.telemetry);
+        } catch {}
+        showToast(nextHidden ? "HUD:: HIDDEN" : "HUD:: VISIBLE");
+      } else if (action === "copy:email") {
+        void copyText(site.email, site.email);
+      } else if (action === "copy:url") {
+        void copyText(window.location.href, window.location.pathname || "/");
+      } else if (href) {
         if (href.startsWith("mailto:")) window.location.href = href;
         else if (href.startsWith("http")) window.open(href, "_blank", "noopener,noreferrer");
         else go(href);
@@ -175,7 +248,13 @@ export function ChromeBehaviors() {
     on(document, "click", (e) => {
       const t = e.target as HTMLElement;
       const themeBtn = t.closest<HTMLElement>("[data-theme-set]");
-      if (themeBtn) return applyTheme(themeBtn.dataset.themeSet as Theme);
+      if (themeBtn) {
+        const r = themeBtn.getBoundingClientRect();
+        return applyTheme(normalizeThemeMode(themeBtn.dataset.themeSet), true, {
+          x: r.left + r.width * 0.5,
+          y: r.top + r.height * 0.5,
+        });
+      }
       const item = t.closest<HTMLElement>("[data-cmd-item]");
       if (item) return run(item);
       if (t.closest("[data-cmd-open]")) return isOpen(cmd) ? closeAll() : openCmd();
@@ -264,7 +343,10 @@ export function ChromeBehaviors() {
         n.toggleAttribute("data-unread", isUnread);
       });
       const dot = $("[data-notif-dot]");
-      if (dot) dot.hidden = unread === 0;
+      if (dot) {
+        dot.hidden = unread === 0;
+        dot.setAttribute("data-open", unread > 0 ? "true" : "false");
+      }
       const count = $("[data-notif-count]");
       if (count) {
         count.hidden = unread === 0;
@@ -281,6 +363,7 @@ export function ChromeBehaviors() {
           localStorage.setItem(SEEN, String(seen));
         } catch {}
         paintUnread();
+        showToast("LOG:: MARKED READ");
       }
     });
 
@@ -299,7 +382,6 @@ export function ChromeBehaviors() {
         pill.style.opacity = "0";
         return;
       }
-      // the pill is positioned inside its offsetParent (the padded nav), so measure against that
       const host = (pill.offsetParent as HTMLElement | null) ?? list;
       const hr = host.getBoundingClientRect();
       const r = a.getBoundingClientRect();
@@ -308,7 +390,11 @@ export function ChromeBehaviors() {
       pill.style.transform = `translate(${r.left - hr.left - host.clientLeft}px, ${r.top - hr.top - host.clientTop}px)`;
       pill.style.opacity = "1";
     };
-    const current = links.find((a) => a.getAttribute("href") === pathname) ?? null;
+    const current =
+      links.find((a) => {
+        const href = a.getAttribute("href") ?? "";
+        return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+      }) ?? null;
     links.forEach((a) => a.toggleAttribute("aria-current", a === current));
     place(current);
     document.fonts?.ready.then(() => place(current));

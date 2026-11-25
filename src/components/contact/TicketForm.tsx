@@ -1,31 +1,40 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { TICKET_TYPES, type TicketType } from "@/lib/contact/validate";
+import { SignaturePad } from "./SignaturePad";
 import { TicketStub } from "./TicketStub";
 
 type Errors = Partial<Record<"type" | "name" | "email" | "message" | "form", string>>;
+
+const emptySubscribe = () => () => {};
+function getKlDate() {
+  return new Date()
+    .toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Kuala_Lumpur",
+    })
+    .toUpperCase();
+}
 
 export function TicketForm({ email }: { email: string }) {
   const [type, setType] = useState<TicketType>("hello");
   const [name, setName] = useState("");
   const [mail, setMail] = useState("");
   const [message, setMessage] = useState("");
+  const [signature, setSignature] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [ticketNo, setTicketNo] = useState<string | null>(null);
-  const [date, setDate] = useState("");
-  const stub = useRef<HTMLDivElement>(null);
-  const refs = {
-    name: useRef<HTMLInputElement>(null),
-    email: useRef<HTMLInputElement>(null),
-    message: useRef<HTMLTextAreaElement>(null),
-  };
 
-  useEffect(() => {
-    // set after mount so the server and first client render agree
-    setDate(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kuala_Lumpur" }).toUpperCase());
-  }, []);
+  const date = useSyncExternalStore(emptySubscribe, getKlDate, () => "");
+
+  const stub = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,14 +46,15 @@ export function TicketForm({ email }: { email: string }) {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, name, email: mail, message, website }),
+        body: JSON.stringify({ type, name, email: mail, message, signature: signature || undefined, website }),
       });
       const j = (await res.json().catch(() => ({}))) as { ticketNo?: string; field?: string; error?: string };
       if (res.ok && j.ticketNo) {
         setTicketNo(j.ticketNo);
-      } else if (j.field && j.field in refs) {
+      } else if (j.field === "name" || j.field === "email" || j.field === "message") {
         setErrors({ [j.field]: j.error } as Errors);
-        refs[j.field as keyof typeof refs].current?.focus();
+        const focusTarget = j.field === "name" ? nameRef.current : j.field === "email" ? emailRef.current : messageRef.current;
+        focusTarget?.focus();
       } else {
         setErrors({ form: j.error ?? `Couldn't send right now. Email me directly at ${email}.` });
       }
@@ -69,39 +79,104 @@ export function TicketForm({ email }: { email: string }) {
 
   return (
     <div className="ticket">
-      <form className="ticket__form" onSubmit={submit} noValidate aria-describedby={errors.form ? "ticket-form-err" : undefined}>
+      <form
+        className="ticket__form letter-sheet"
+        onSubmit={submit}
+        noValidate
+        aria-describedby={errors.form ? "ticket-form-err" : undefined}
+      >
+        <div className="letter-sheet__meta text-mono-meta">
+          <span>DATE::{date || "MYT"}</span>
+          <span>DESK::KIHURN</span>
+        </div>
+
         <fieldset className="ticket__types" disabled={sent}>
-          <legend className="text-label">What is this about?</legend>
-          {TICKET_TYPES.map((t) => (
-            <label key={t.id} className="ticket__radio text-body">
-              <input type="radio" name="type" value={t.id} checked={type === t.id} onChange={() => setType(t.id)} />
-              <span>{t.label}</span>
-            </label>
-          ))}
+          <legend className="text-label">RE :: What is this about?</legend>
+          <div className="ticket__pills">
+            {TICKET_TYPES.map((t) => (
+              <label key={t.id} className="ticket__radio text-body">
+                <input type="radio" name="type" value={t.id} checked={type === t.id} onChange={() => setType(t.id)} />
+                <span>{t.label}</span>
+              </label>
+            ))}
+          </div>
         </fieldset>
 
-        <label className="ticket__field">
-          <span className="text-label">Your name</span>
-          <input ref={refs.name} name="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" disabled={sent} aria-invalid={!!errors.name} aria-describedby={errors.name ? "err-name" : undefined} />
-          {errors.name ? <span id="err-name" className="ticket__err" role="alert">{errors.name}</span> : null}
-        </label>
+        <div className="letter-sheet__row">
+          <label className="ticket__field">
+            <span className="text-label">Your name</span>
+            <input
+              ref={nameRef}
+              name="name"
+              placeholder="FROM :: Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={80}
+              autoComplete="name"
+              disabled={sent}
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? "err-name" : undefined}
+            />
+            {errors.name ? (
+              <span id="err-name" className="ticket__err" role="alert">
+                {errors.name}
+              </span>
+            ) : null}
+          </label>
 
-        <label className="ticket__field">
-          <span className="text-label">Your email</span>
-          <input ref={refs.email} name="email" type="email" value={mail} onChange={(e) => setMail(e.target.value)} autoComplete="email" disabled={sent} aria-invalid={!!errors.email} aria-describedby={errors.email ? "err-email" : undefined} />
-          {errors.email ? <span id="err-email" className="ticket__err" role="alert">{errors.email}</span> : null}
-        </label>
+          <label className="ticket__field">
+            <span className="text-label">Your email</span>
+            <input
+              ref={emailRef}
+              name="email"
+              type="email"
+              placeholder="you@domain.com"
+              value={mail}
+              onChange={(e) => setMail(e.target.value)}
+              autoComplete="email"
+              disabled={sent}
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? "err-email" : undefined}
+            />
+            {errors.email ? (
+              <span id="err-email" className="ticket__err" role="alert">
+                {errors.email}
+              </span>
+            ) : null}
+          </label>
+        </div>
 
         <label className="ticket__field">
           <span className="text-label">Message</span>
-          <textarea ref={refs.message} name="message" rows={6} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} disabled={sent} aria-invalid={!!errors.message} aria-describedby={errors.message ? "err-message" : undefined} />
-          {errors.message ? <span id="err-message" className="ticket__err" role="alert">{errors.message}</span> : null}
+          <textarea
+            ref={messageRef}
+            name="message"
+            rows={6}
+            placeholder="Write a note, timeline, or link…"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            maxLength={2000}
+            disabled={sent}
+            aria-invalid={!!errors.message}
+            aria-describedby={errors.message ? "err-message" : undefined}
+          />
+          {errors.message ? (
+            <span id="err-message" className="ticket__err" role="alert">
+              {errors.message}
+            </span>
+          ) : null}
         </label>
+
+        <SignaturePad value={signature} onChange={setSignature} disabled={sent} />
 
         {/* honeypot: hidden from people and screen readers, bots fill it */}
         <input className="ticket__hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" defaultValue="" />
 
-        {errors.form ? <p id="ticket-form-err" className="ticket__err" role="alert">{errors.form}</p> : null}
+        {errors.form ? (
+          <p id="ticket-form-err" className="ticket__err" role="alert">
+            {errors.form}
+          </p>
+        ) : null}
 
         {sent ? (
           <p className="text-body" role="status">
@@ -115,7 +190,40 @@ export function TicketForm({ email }: { email: string }) {
       </form>
 
       <div className="ticket__side">
-        <TicketStub ref={stub} ticketNo={ticketNo} date={date} type={type} name={name} status={sent ? "queued" : "writing"} />
+        <div className="stub-pinned">
+          <svg
+            className="stub-paperclip"
+            viewBox="0 0 36 86"
+            fill="none"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M11 65V22a9 9 0 0 1 18 0v44a12 12 0 0 1-24 0V28a6 6 0 0 1 12 0v32"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+            <path
+              d="M11 65V22a9 9 0 0 1 18 0v44a12 12 0 0 1-24 0V28a6 6 0 0 1 12 0v32"
+              stroke="rgba(255,255,255,0.45)"
+              strokeWidth="0.9"
+              strokeLinecap="round"
+              transform="translate(-0.7 -0.5)"
+            />
+          </svg>
+          <TicketStub
+            ref={stub}
+            ticketNo={ticketNo}
+            date={date}
+            type={type}
+            name={name}
+            email={mail}
+            message={message}
+            signature={signature}
+            status={sent ? "queued" : "writing"}
+          />
+        </div>
         {sent ? (
           <button type="button" className="btn text-tag" data-download onClick={download}>
             Download your stub

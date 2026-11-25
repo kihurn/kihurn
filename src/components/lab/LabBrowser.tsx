@@ -32,7 +32,7 @@ function Entry({ p }: { p: Project }) {
           ))}
         </ul>
       </header>
-      <ShotSlot internal={internal} />
+      <ShotSlot internal={internal} slug={p.slug} name={p.name} />
       <p className="pentry__summary text-body">{p.summary}</p>
       <dl className="pentry__parts">
         <div>

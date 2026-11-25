@@ -12,7 +12,7 @@ interface Props {
 
 export function Header({ chatOnline, building }: Props) {
   return (
-    <header className="header" data-header>
+    <header className="header" data-header data-theme="dark" data-theme-mode="dark">
       <StatusBar chatOnline={chatOnline} building={building} />
       <div className="header__bar">
         <div className="header__lead">
