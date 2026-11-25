@@ -5,7 +5,6 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import {
   createBeveledTileGeometry,
-  createParticleSpriteTexture,
   paintIconEmblemCanvas,
   paintProjectPlateCanvas,
 } from "@/lib/pressWheelTextures";
@@ -269,44 +268,9 @@ export function PressWheelCanvas({
       rightGroups.push({ group, bodyMat, faceMat });
     });
 
-    const particleCount = software ? 260 : 420;
-    const pPos = new Float32Array(particleCount * 3);
-    const pBase = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount; i++) {
-      const t = i / particleCount;
-      const angle = t * Math.PI * 16 + (i % 7) * 0.35;
-      const radius = 0.38 + Math.pow(t, 0.72) * 3.1;
-      const depthZ = -1.1 - ((i * 19) % 100) * 0.02;
-      pBase[i * 3] = angle;
-      pBase[i * 3 + 1] = radius;
-      pBase[i * 3 + 2] = depthZ;
-      pPos[i * 3] = Math.cos(angle) * radius;
-      pPos[i * 3 + 1] = Math.sin(angle) * radius * 0.85;
-      pPos[i * 3 + 2] = depthZ;
-    }
-
-    const vortexGeo = new THREE.BufferGeometry();
-    vortexGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
-    const spriteTex = createParticleSpriteTexture();
-    texturesToDispose.push(spriteTex);
-
-    const vortexMat = new THREE.PointsMaterial({
-      size: 0.068,
-      map: spriteTex,
-      transparent: true,
-      depthWrite: false,
-      opacity: isDark() ? 0.34 : 0.28,
-      color: isDark() ? 0xd6d6d5 : 0x1e1e1e,
-    });
-    materialsToDispose.push(vortexMat);
-    const vortexPoints = new THREE.Points(vortexGeo, vortexMat);
-    scene.add(vortexPoints);
-
     const themeObs = new MutationObserver(() => {
       const nextDark = isDark();
       repainters.forEach((fn) => fn(nextDark));
-      vortexMat.color.setHex(nextDark ? 0xd6d6d5 : 0x1e1e1e);
-      vortexMat.opacity = nextDark ? 0.34 : 0.28;
     });
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
@@ -378,23 +342,6 @@ export function PressWheelCanvas({
       const py = s?.pointerY ?? 0.5;
       const vx = s?.pointerVelX ?? 0;
       const vy = s?.pointerVelY ?? 0;
-
-      const posAttr = vortexGeo.getAttribute("position") as THREE.BufferAttribute;
-      const arr = posAttr.array as Float32Array;
-      const swirlOffset = nowSec * 0.24 + pos * 0.45;
-      const cursorBiasX = (px - 0.5) * 0.55;
-      const cursorBiasY = (py - 0.5) * 0.45;
-      const expand = 1 + smoothGlitch * 0.18;
-      for (let i = 0; i < particleCount; i++) {
-        const a0 = pBase[i * 3];
-        const r0 = pBase[i * 3 + 1] * expand;
-        const z0 = pBase[i * 3 + 2];
-        const angle = a0 + swirlOffset / Math.max(0.45, r0 * 0.65);
-        arr[i * 3] = Math.cos(angle) * r0 + cursorBiasX * (0.4 + r0 * 0.12);
-        arr[i * 3 + 1] = Math.sin(angle) * r0 * 0.78 + cursorBiasY * (0.4 + r0 * 0.12);
-        arr[i * 3 + 2] = z0 + Math.sin(nowSec + a0) * 0.12;
-      }
-      posAttr.needsUpdate = true;
 
       for (let i = 0; i < N; i++) {
         const off = wrapHalfOffset(i - pos, N);
@@ -497,7 +444,6 @@ export function PressWheelCanvas({
       photoGeo.dispose();
       tileBevelGeo.dispose();
       tileFaceGeo.dispose();
-      vortexGeo.dispose();
       materialsToDispose.forEach((m) => m.dispose());
       texturesToDispose.forEach((t) => t.dispose());
       renderer.dispose();

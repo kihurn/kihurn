@@ -13,7 +13,7 @@ export function Cassette() {
 
   return (
     <div className="cassette" data-playing={playing}>
-      <div className="cassette__body">
+      <div className="cassette__body" data-depth-card>
         <div className="cassette__back" aria-hidden="true" />
         <div className="cassette__edge" aria-hidden="true" />
         <div className="cassette__face">

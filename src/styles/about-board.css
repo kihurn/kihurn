@@ -59,7 +59,7 @@
 
 .ov3__slot{min-width:0}
 .ov3__item{cursor:zoom-in;transform-origin:center;transition:transform .29s var(--ease-out-expo)}
-.ov3__item.is-active{z-index:60;cursor:default;transform:translate3d(var(--inspect-x),var(--inspect-y),0) scale(var(--inspect-scale))}
+.ov3__item.is-active{z-index:60;cursor:default;transform:translate3d(var(--inspect-x),var(--inspect-y),0) scale(var(--inspect-scale)) var(--tilt,scale(1))}
 .ov3[data-inspecting]{z-index:1300}
 .ov3 .ov3__scrim{background:var(--scrim)}
 .ov3__exit{inset-block-end:1rem}
@@ -90,7 +90,7 @@ html:has(.ov3){scrollbar-gutter:stable}
   aspect-ratio:1.72;
   min-height:174px;
   transform-style:preserve-3d;
-  transform:rotateX(13deg) rotateY(-9deg) rotateZ(2deg);
+  transform:translate3d(var(--hover-x,0px),var(--hover-y,0px),0) rotateX(calc(13deg + var(--tilt-x,0deg))) rotateY(calc(-9deg + var(--tilt-y,0deg))) rotateZ(2deg);
 }
 .cassette__face,.cassette__back{
   position:absolute;
@@ -186,3 +186,23 @@ html:has(.ov3){scrollbar-gutter:stable}
 .cassette__screws i:nth-child(2){top:0;right:0}
 .cassette__screws i:nth-child(3){bottom:0;left:0}
 .cassette__screws i:nth-child(4){bottom:0;right:0}
+
+@media (any-hover:hover) and (any-pointer:fine) and (prefers-reduced-motion:no-preference){
+  :is(.ov3__env,.ov3__tele)[data-tilted]{
+    --tilt:translate3d(var(--hover-x,0px),var(--hover-y,0px),0) perspective(1000px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));
+  }
+  .ov3__env,.ov3__tele:not(.is-active){transform:var(--tilt,none)}
+  .ov3__env,.cassette__body{transition:transform .2s var(--ease-out-expo)}
+  .ov3__env,.ov3__tele,.ov3__env .frank{transform-style:preserve-3d}
+  .ov3__env .frank__stamp{transform:translateZ(12px)}
+  .ov3__env .frank__shine{transform:translateZ(16px)}
+  .ov3__env .frank__postmark{transform:translateZ(20px)}
+  .ov3__env .frank__clip{transform:translateZ(28px) rotate(11deg)}
+  .ov3__env[data-tilted] .frank__shine{opacity:.24;--shx:var(--shine-x);--shy:var(--shine-y)}
+  :is(.ov3__env,.ov3__tele,.cassette__face)::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse at var(--shine-x,50%) var(--shine-y,50%),#fff2,transparent 64%);
+    transition:opacity .18s var(--ease-out-quad);
+  }
+  :is(.ov3__env,.ov3__tele)[data-tilted]::after,.cassette__body[data-tilted] .cassette__face::after{opacity:1}
+}

@@ -267,7 +267,6 @@ export function AboutBoard() {
         <article
           className="ov3__item ov3__cassette"
           data-canvas-item
-          data-depth-card
           tabIndex={0}
           aria-label="Now playing cassette"
         >

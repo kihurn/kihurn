@@ -70,6 +70,7 @@ export function AboutBehaviors() {
     const scrim = document.querySelector<HTMLElement>("[data-canvas-scrim]");
     const exitWrap = document.querySelector<HTMLElement>("[data-canvas-exit]");
     const exitBtn = document.querySelector<HTMLElement>("[data-canvas-close]");
+    const hoverMotion = matchMedia("(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference)");
     let activeCard: HTMLElement | null = null;
 
     function positionInspection() {
@@ -109,6 +110,43 @@ export function AboutBehaviors() {
 
     for (const item of boardItems) {
       let press: { x: number; y: number } | undefined;
+      const surface = item.matches("[data-depth-card]") ? item : item.querySelector<HTMLElement>("[data-depth-card]");
+      if (surface) {
+        let frame = 0;
+        const settle = () => {
+          cancelAnimationFrame(frame);
+          frame = 0;
+          delete surface.dataset.tilted;
+          for (const axis of ["--tilt-x", "--tilt-y", "--hover-x", "--hover-y", "--shine-x", "--shine-y"]) surface.style.removeProperty(axis);
+        };
+        on(item, "pointermove", (event) => {
+          const pointer = event as PointerEvent;
+          if (!hoverMotion.matches || pointer.pointerType === "touch" || pointer.buttons) return;
+          cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(() => {
+            const slot = item.parentElement?.getBoundingClientRect();
+            if (!slot) return;
+            const inspecting = activeCard === item;
+            const scale = inspecting ? Number(item.style.getPropertyValue("--inspect-scale")) : 1;
+            const centerX = inspecting ? document.documentElement.clientWidth / 2 : slot.left + slot.width / 2;
+            const centerY = inspecting ? window.innerHeight / 2 - 12 : slot.top + slot.height / 2;
+            const x = Math.max(-1, Math.min(1, (pointer.clientX - centerX) * 2 / Math.max(1, slot.width * scale)));
+            const y = Math.max(-1, Math.min(1, (pointer.clientY - centerY) * 2 / Math.max(1, slot.height * scale)));
+            const cassette = surface.classList.contains("cassette__body");
+            surface.style.setProperty("--tilt-x", `${-y * (cassette ? 17 : 8)}deg`);
+            surface.style.setProperty("--tilt-y", `${x * (cassette ? 25 : 11)}deg`);
+            surface.style.setProperty("--hover-x", `${x * (inspecting ? 5 : 13)}px`);
+            surface.style.setProperty("--hover-y", `${y * (inspecting ? 4 : 9)}px`);
+            surface.style.setProperty("--shine-x", `${50 + 45 * x}%`);
+            surface.style.setProperty("--shine-y", `${50 + 45 * y}%`);
+            surface.dataset.tilted = "";
+          });
+        });
+        on(item, "pointerleave", settle);
+        on(item, "pointerdown", settle);
+        on(hoverMotion, "change", settle);
+        cleanups.push(settle);
+      }
       on(item, "pointerdown", (event) => {
         const pointer = event as PointerEvent;
         press = { x: pointer.clientX, y: pointer.clientY };
