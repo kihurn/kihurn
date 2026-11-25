@@ -17,7 +17,8 @@ function TurntableScene({ transport, display }: {
 
   useEffect(() => {
     const element = canvas.current;
-    if (!element) return;
+    const panel = display.current;
+    if (!element || !panel) return;
     const gl = element.getContext("webgl2", { alpha: true, antialias: true });
     if (!gl || gl.isContextLost()) return;
     const renderer = new THREE.WebGLRenderer({ canvas: element, context: gl, alpha: true, antialias: true });
@@ -171,7 +172,7 @@ function TurntableScene({ transport, display }: {
       const b = (topRight.y - topLeft.y) / DISPLAY_WIDTH;
       const c = (bottomLeft.x - topLeft.x) / DISPLAY_HEIGHT;
       const d = (bottomLeft.y - topLeft.y) / DISPLAY_HEIGHT;
-      display.current?.style.setProperty("--display-plane", `matrix(${a},${b},${c},${d},${topLeft.x},${topLeft.y})`);
+      panel.style.setProperty("--display-plane", `matrix(${a},${b},${c},${d},${topLeft.x},${topLeft.y})`);
       needsRender = true;
     };
     const observer = new ResizeObserver(resize);
@@ -206,7 +207,7 @@ function TurntableScene({ transport, display }: {
       observer.disconnect();
       renderer.setAnimationLoop(null);
       element.parentElement?.removeAttribute("data-gl-ready");
-      display.current?.style.removeProperty("--display-plane");
+      panel.style.removeProperty("--display-plane");
       disposeScene(scene, renderer);
     };
   }, [transport, display]);
