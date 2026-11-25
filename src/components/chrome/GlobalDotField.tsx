@@ -13,7 +13,7 @@ type Sample = { x: number; y: number; start: number };
 type Wave = Sample & { reach: number };
 
 const WAKE_MS = 580;
-const WAKE_RADIUS = 70;
+const WAKE_RADIUS = 112;
 const WAVE_SPEED = 1.05;
 const WAVE_WIDTH = 124;
 const LEVELS = 24;
@@ -117,7 +117,7 @@ export function GlobalDotField() {
       base.clearRect(0, 0, width, height);
       base.fillStyle = ink;
       levels.forEach((dots, index) => {
-        base.globalAlpha = .045 + (lightTheme ? .19 : .23) * index / LEVELS;
+        base.globalAlpha = .012 + (lightTheme ? .075 : .09) * (index / LEVELS) ** 2.4;
         paintDots(base, dots);
       });
       base.globalAlpha = 1;
@@ -169,7 +169,7 @@ export function GlobalDotField() {
           };
           levels[Math.round((band * .62 + falloff * .26 + grain * .12) * LEVELS)].push(dot);
           allDots.push(dot);
-          if (((seed >>> 20) & 255) < 166) hoverDots.push(dot);
+          if (((seed >>> 20) & 255) < 77) hoverDots.push(dot);
         }
       }
       paintDots(all, allDots);
