@@ -3,12 +3,13 @@
 import Image from "next/image";
 import { useState, type ReactNode } from "react";
 
-export function OptionalPhoto({ src, alt, width, height, className, children }: {
+export function OptionalPhoto({ src, alt, width, height, className, sizes, children }: {
   src?: string;
   alt: string;
   width: number;
   height: number;
   className?: string;
+  sizes?: string;
   children: ReactNode;
 }) {
   const [failedSrc, setFailedSrc] = useState<string>();
@@ -16,7 +17,8 @@ export function OptionalPhoto({ src, alt, width, height, className, children }: 
 
   return (
     <Image
-      unoptimized
+      unoptimized={!sizes}
+      sizes={sizes}
       className={className}
       src={src}
       alt={alt}

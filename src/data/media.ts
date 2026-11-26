@@ -11,9 +11,10 @@ export const media = {
   } as Readonly<Record<string, string | undefined>>,
   portrait: "/images/portrait.jpg",
   gigs: {
-    "wnbf-malaysia-2025": "/images/gigs/wnbf-malaysia-2025.webp",
-    "circus-funtasia": "/images/gigs/circus-funtasia.webp",
-    "orientation-party-2026": "/images/gigs/orientation-party-2026.webp",
-    "law-ball-2025": "/images/gigs/law-ball-2025.webp",
+    "wnbf-malaysia-2025": "/images/gigs/WNBF.jpg",
+    "circus-funtasia": "/images/gigs/CircusFantasia.jpg",
+    "orientation-party-2026": "/images/gigs/OrientationParty.jpg",
+    "law-ball-2025": "/images/gigs/LawBall.jpg",
+    "imaginehack-2026": "/images/gigs/ImagineHack2026.JPG",
   } as Readonly<Record<string, string | undefined>>,
 };

@@ -11,7 +11,8 @@ import {
   setChainAnchor,
   stepVerletChain,
 } from "@/lib/physics/verlet";
-import { BADGE_HEIGHT, BADGE_TOP, BADGE_WIDTH, QR_SIZE, STRAP_WIDTH, createLanyardScene } from "./lanyardScene";
+import { ART_HEIGHT, BADGE_HEIGHT, BADGE_WIDTH, LanyardArtwork, QR_CENTER_Y, QR_SIZE } from "./LanyardArtwork";
+import { BADGE_TOP, STRAP_WIDTH, createLanyardScene } from "./lanyardScene";
 
 function subscribeToReducedMotion(callback: () => void) {
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -28,6 +29,8 @@ export function LanyardStage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
+  const frontRef = useRef<SVGSVGElement>(null);
+  const backRef = useRef<SVGSVGElement>(null);
   const [flipped, setFlipped] = useState(false);
   const reduced = useSyncExternalStore(subscribeToReducedMotion, prefersReducedMotion, () => false);
 
@@ -42,7 +45,9 @@ export function LanyardStage() {
     const startY = reduced ? restY : -rect.height - 32;
     const chain = createVerletChain(rect.width * .5, startY, 10, 20, reduced ? 0 : 36);
     const canvas = canvasRef.current;
-    const scene = canvas ? createLanyardScene(canvas, chain, () => paint(0)) : undefined;
+    const front = frontRef.current;
+    const back = backRef.current;
+    const scene = canvas && front && back ? createLanyardScene(canvas, chain, [front, back], () => paint(0)) : undefined;
     if (scene) stage.dataset.glReady = "";
     stage.dataset.ready = "";
 
@@ -68,6 +73,7 @@ export function LanyardStage() {
       });
       path.setAttribute("d", `M ${nodes[0].x} ${nodes[0].y} ${curves.join(" ")} L ${tail.x} ${tail.y}`);
       badge.style.transform = `translate3d(${pose.x - BADGE_WIDTH / 2}px,${pose.y - 8}px,0) rotate(${pose.angleDeg}deg) rotateX(${xTilt}deg) rotateY(${yTilt}deg) scale(${scale})`;
+      if (!scene) badge.style.setProperty("--lamination-position", `${50 + yTilt * 2}%`);
       scene?.draw(badge.dataset.flipped === "true", dt);
     }
 
@@ -208,7 +214,7 @@ export function LanyardStage() {
         tabIndex={0}
         role="button"
         aria-pressed={flipped}
-        aria-label="Crew pass. Flip to view the event portfolio QR code."
+        aria-label="Wong Ki Hurn’s crew pass. Flip to view the event portfolio QR code."
         onClick={(event) => {
           if (reduced || event.detail === 0) setFlipped((value) => !value);
         }}
@@ -221,11 +227,19 @@ export function LanyardStage() {
         <div className="lanyard__clip" aria-hidden="true"><span /></div>
         <div className="lanyard__flipper" data-pass-inner>
           <div className="lanyard__face lanyard__front" aria-hidden={flipped}>
-            <strong className="lanyard__print">Wong Ki Hurn</strong>
+            <LanyardArtwork artRef={frontRef} />
           </div>
           <div className="lanyard__face lanyard__back" data-pass-back aria-hidden={!flipped}>
-            <strong className="lanyard__print">Event portfolio</strong>
-            <Image className="lanyard__qr" src={eventPortfolioQr} width={QR_SIZE} height={QR_SIZE} alt="QR code for the event portfolio" unoptimized />
+            <LanyardArtwork back artRef={backRef} />
+            <Image
+              className="lanyard__qr"
+              src={eventPortfolioQr}
+              width={QR_SIZE}
+              height={QR_SIZE}
+              style={{ top: `${QR_CENTER_Y / ART_HEIGHT * 100}%` }}
+              alt="QR code for the event portfolio"
+              unoptimized
+            />
           </div>
         </div>
       </div>

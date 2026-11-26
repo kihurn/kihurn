@@ -3,16 +3,10 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { eventPortfolioQr } from "@/content/gigs";
 import { disposeScene } from "@/lib/disposeScene";
 import { computeBadgePose, type VerletChain } from "@/lib/physics/verlet";
+import { ART_HEIGHT, ART_WIDTH, BADGE_HEIGHT, BADGE_WIDTH, CARD_PAPER, FRAME_BORDER, QR_CENTER_Y, QR_SIZE } from "./LanyardArtwork";
 
-export const BADGE_WIDTH = 245;
-export const BADGE_HEIGHT = 390;
 export const BADGE_TOP = 64;
-export const FRAME_BORDER = 16;
-export const STRAP_WIDTH = 38;
-export const QR_SIZE = 156;
-
-const insertWidth = BADGE_WIDTH - FRAME_BORDER * 2;
-const insertHeight = BADGE_HEIGHT - FRAME_BORDER * 2;
+export const STRAP_WIDTH = 41;
 
 function roundedPanel(width: number, height: number, top: number, radius: number) {
   const half = width / 2;
@@ -30,29 +24,27 @@ function roundedPanel(width: number, height: number, top: number, radius: number
   return shape;
 }
 
-function badgePrint(back: boolean) {
+function badgePrint(art: SVGSVGElement, onTextureReady: () => void) {
   const canvas = document.createElement("canvas");
-  canvas.width = insertWidth * 4;
-  canvas.height = insertHeight * 4;
+  canvas.width = ART_WIDTH * 4;
+  canvas.height = ART_HEIGHT * 4;
   const ctx = canvas.getContext("2d")!;
-  ctx.scale(4, 4);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, insertWidth, insertHeight);
-  const labelY = back ? 18 : insertHeight - 66;
-  ctx.fillStyle = "#15161a";
-  ctx.fillRect(14, labelY, insertWidth - 28, 48);
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = back ? "600 19px sans-serif" : "600 24px sans-serif";
-  ctx.fillText(back ? "Event portfolio" : "Wong Ki Hurn", insertWidth / 2, labelY + 24);
+  ctx.fillStyle = CARD_PAPER;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
   map.anisotropy = 4;
-  return map;
+  const image = new Image();
+  image.onload = () => {
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    map.needsUpdate = true;
+    onTextureReady();
+  };
+  image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(art))}`;
+  return { map, image };
 }
 
-export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain, onTextureReady: () => void) {
+export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain, artwork: [SVGSVGElement, SVGSVGElement], onTextureReady: () => void) {
   const gl = canvas.getContext("webgl2", { alpha: true, antialias: true });
   if (!gl || gl.isContextLost()) return;
   const renderer = new THREE.WebGLRenderer({ canvas, context: gl, alpha: true, antialias: true });
@@ -78,33 +70,60 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
   scene.add(badge);
   const top = -BADGE_TOP;
   const shape = roundedPanel(BADGE_WIDTH - 2, BADGE_HEIGHT - 2, top, 13);
-  const opening = roundedPanel(insertWidth + 3, insertHeight + 3, top - FRAME_BORDER + 1.5, 5);
+  const opening = roundedPanel(ART_WIDTH + 3, ART_HEIGHT + 3, top - FRAME_BORDER + 1.5, 5);
   shape.holes.push(new THREE.Path(opening.getPoints()));
   const frameMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x0a0b0d, metalness: .12, roughness: .38, clearcoat: .35, envMapIntensity: .22,
+    color: 0x101010, metalness: .12, roughness: .54, clearcoat: .24, specularIntensity: .36, envMapIntensity: .1,
   });
   const housing = new THREE.Mesh(
     new THREE.ExtrudeGeometry(shape, { depth: 9, bevelThickness: 1.5, bevelSize: 1.5, bevelSegments: 5, curveSegments: 18 }),
-    frameMaterial,
+    [new THREE.MeshBasicMaterial({ color: 0x161616 }), frameMaterial],
   );
   housing.position.z = -4.5;
   badge.add(housing);
 
   const insert = new THREE.Mesh(
-    new THREE.BoxGeometry(insertWidth, insertHeight, 4),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .52 }),
+    new THREE.BoxGeometry(ART_WIDTH, ART_HEIGHT, 4),
+    new THREE.MeshStandardMaterial({ color: CARD_PAPER, roughness: .52 }),
   );
   insert.position.y = top - BADGE_HEIGHT / 2 - 1;
   badge.add(insert);
 
-  for (const back of [false, true]) {
+  const lamination = new THREE.ShaderMaterial({
+    uniforms: { shift: { value: 0 }, strength: { value: .02 } },
+    transparent: true,
+    depthWrite: false,
+    vertexShader: `
+      varying vec2 surfaceUv;
+      void main() {
+        surfaceUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec2 surfaceUv;
+      uniform float shift;
+      uniform float strength;
+      void main() {
+        float ribbon = 1.0 - smoothstep(0.008, 0.17, abs(surfaceUv.x - surfaceUv.y * 0.68 - shift));
+        gl_FragColor = vec4(1.0, 1.0, 1.0, ribbon * strength);
+      }
+    `,
+  });
+  const prints = artwork.map((art) => badgePrint(art, onTextureReady));
+  for (const [i, { map }] of prints.entries()) {
+    const back = i === 1;
     const face = new THREE.Mesh(
-      new THREE.PlaneGeometry(insertWidth, insertHeight),
-      new THREE.MeshBasicMaterial({ map: badgePrint(back) }),
+      new THREE.PlaneGeometry(ART_WIDTH, ART_HEIGHT),
+      new THREE.MeshBasicMaterial({ map }),
     );
     face.rotation.y = back ? Math.PI : 0;
     face.position.set(0, insert.position.y, back ? -2.1 : 2.1);
     badge.add(face);
+    const sheen = new THREE.Mesh(face.geometry, lamination);
+    sheen.rotation.y = face.rotation.y;
+    sheen.position.set(0, insert.position.y, back ? -2.2 : 2.2);
+    badge.add(sheen);
   }
 
   const qrImage = new Image();
@@ -115,7 +134,7 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
   qrMap.generateMipmaps = false;
   const qr = new THREE.Mesh(new THREE.PlaneGeometry(QR_SIZE, QR_SIZE), new THREE.MeshBasicMaterial({ map: qrMap, transparent: true }));
   qr.rotation.y = Math.PI;
-  qr.position.set(0, top - FRAME_BORDER - 190, -2.3);
+  qr.position.set(0, insert.position.y + ART_HEIGHT / 2 - QR_CENTER_Y, -2.3);
   qr.visible = false;
   badge.add(qr);
   qrImage.onload = () => {
@@ -125,14 +144,15 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
   };
   qrImage.src = eventPortfolioQr;
 
-  const steel = new THREE.MeshStandardMaterial({ color: 0xe1e7ef, metalness: .89, roughness: .22 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x27292d, metalness: .87, roughness: .37, envMapIntensity: .32 });
   const ferrule = new THREE.Mesh(new THREE.BoxGeometry(STRAP_WIDTH + 4, 9, 9), frameMaterial);
   ferrule.position.y = -1;
   const ring = new THREE.Mesh(new THREE.TorusGeometry(9, 2.4, 16, 64), steel);
   ring.position.y = -15;
   const swivel = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4.6, 13, 24), steel);
   swivel.position.y = -31;
-  const eyelet = new THREE.Mesh(new THREE.TorusGeometry(12, 4, 12, 36), frameMaterial);
+  const eyelet = new THREE.Mesh(new THREE.TorusGeometry(10, 4, 12, 36), frameMaterial);
+  eyelet.scale.set(1.45, .72, 1);
   eyelet.position.y = top + 4;
   const claspPath = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, -34, 1), new THREE.Vector3(-7, -42, 1), new THREE.Vector3(-8, -51, 1),
@@ -161,7 +181,7 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
   weaveMap.repeat.y = 18;
   const strap = new THREE.PlaneGeometry(1, 1, 1, chain.nodes.length - 1);
   const cord = new THREE.Mesh(strap, new THREE.MeshStandardMaterial({
-    map: weaveMap, roughness: .94, envMapIntensity: .18, side: THREE.DoubleSide,
+    map: weaveMap, color: 0xb1b1b1, roughness: .98, envMapIntensity: .12, side: THREE.DoubleSide,
   }));
   cord.frustumCulled = false;
   scene.add(cord);
@@ -201,6 +221,8 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
       badge.position.set(pose.x, -pose.y, tail.z);
       badge.scale.setScalar(THREE.MathUtils.clamp(camera.right / 435, 0.58, 1));
       badge.rotation.set(pitch, yaw + flip, THREE.MathUtils.degToRad(-pose.angleDeg), "ZXY");
+      lamination.uniforms.shift.value = .15 + Math.sin(yaw + flip) * .4 + pitch * .22;
+      lamination.uniforms.strength.value = .033 + Math.abs(Math.sin(yaw + flip)) * .055;
       chain.nodes.forEach((node, i) => {
         const prev = chain.nodes[Math.max(0, i - 1)];
         const next = chain.nodes[Math.min(chain.nodes.length - 1, i + 1)];
@@ -220,6 +242,7 @@ export function createLanyardScene(canvas: HTMLCanvasElement, chain: VerletChain
     },
     dispose() {
       qrImage.onload = null;
+      for (const { image } of prints) image.onload = null;
       reflections.dispose();
       disposeScene(scene, renderer);
     },

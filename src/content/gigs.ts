@@ -34,4 +34,10 @@ export const events: GigEvent[] = [
     role: "Event volunteer",
     detail: "",
   },
+  {
+    slug: "imaginehack-2026",
+    name: "ImagineHack 2026",
+    role: "Hosting and marketing",
+    detail: "Hosted and marketed a hackathon with 250+ participants.",
+  },
 ];

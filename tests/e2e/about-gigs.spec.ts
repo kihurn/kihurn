@@ -38,9 +38,10 @@ test.describe("Gigs", () => {
     await page.goto("/gigs");
     await hydrated(page);
     const pass = page.getByRole("button", { name: /crew pass/i });
-    await expect(pass.locator(".lanyard__front")).toHaveText("Wong Ki Hurn");
+    await expect(pass.locator(".lanyard__front")).toContainText("Wong Ki Hurn");
+    await expect(pass.locator(".lanyard__front")).toContainText("CS, Systems & Event Production");
     await expect(pass.locator(".lanyard__photo")).toHaveCount(0);
-    await expect.poll(() => pass.evaluate((element) => (element as HTMLElement).offsetWidth)).toBeGreaterThanOrEqual(245);
+    await expect.poll(() => pass.evaluate((element) => (element as HTMLElement).offsetWidth)).toBe(264);
     await expect(pass).toHaveAttribute("aria-pressed", "false");
     await page.waitForFunction(() => {
       const pass = document.querySelector(".lanyard__badge")?.getBoundingClientRect();
@@ -53,7 +54,7 @@ test.describe("Gigs", () => {
     await expect(qr).toHaveAttribute("src", "/images/event-portfolio-qr.png");
     await expect(page.getByRole("link", { name: "Event portfolio", exact: true })).toHaveAttribute("href", eventPortfolioUrl);
     const ratio = await page.locator("[data-pass-back]").evaluate((face) => (face as HTMLElement).offsetHeight / (face as HTMLElement).offsetWidth);
-    expect(ratio).toBeCloseTo(1.59);
+    expect(ratio).toBeCloseTo(390 / 264);
   });
 
   test("the crew pass flips with the keyboard", async ({ page }) => {
@@ -82,16 +83,22 @@ test.describe("Gigs", () => {
     await page.goto("/gigs");
     await hydrated(page);
     const cards = page.locator("[data-event]");
-    await expect(cards).toHaveCount(4);
+    await expect(cards).toHaveCount(5);
     const stack = page.getByRole("button", { name: /next photo/i });
     await expect(stack).toHaveAccessibleName(/WNBF Malaysia 2025/);
     if (isMobile) await stack.tap();
     else await stack.click();
     await expect(stack).toHaveAccessibleName(/Circus Funtasia/);
-    await expect(cards.filter({ hasText: "WNBF Malaysia 2025" })).toHaveAttribute("data-stack-position", "3");
+    await expect(cards.filter({ hasText: "WNBF Malaysia 2025" })).toHaveAttribute("data-stack-position", "4");
     await expect(page.getByText("Event Crew & Production", { exact: true })).toBeVisible();
     for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next event" }).click();
+    await expect(stack).toHaveAccessibleName(/ImagineHack 2026/);
+    await page.getByRole("button", { name: "Next event" }).click();
     await expect(stack).toHaveAccessibleName(/WNBF Malaysia 2025/);
+    await expect.poll(() => cards.locator("img").evaluateAll((images) => images.filter((element) => {
+      const image = element as HTMLImageElement;
+      return image.naturalWidth > 0 && decodeURIComponent(image.currentSrc).includes("/images/gigs/");
+    }).length)).toBe(5);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
