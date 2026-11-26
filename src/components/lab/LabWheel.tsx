@@ -388,6 +388,7 @@ export function LabWheel({ items }: { items: LabItem[] }) {
           </div>
         ) : null}
 
+        {mode === "wheel" && <p className="lab__wheel-hint mobile-wheel-hint text-mono-meta">↔ Swipe to browse projects</p>}
         <div className="lab__dock">
           {mode === "wheel" ? (
             <button

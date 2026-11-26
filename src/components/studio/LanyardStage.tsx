@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { eventPortfolioQr } from "@/content/gigs";
+import { TOUCH_LAYOUT_QUERY } from "@/lib/chrome";
 import {
   computeBadgePose,
   createVerletChain,
@@ -84,7 +85,8 @@ export function LanyardStage() {
       const renderHeight = canvas?.clientHeight || rect.height;
       maxY = renderHeight - BADGE_TOP - BADGE_HEIGHT - 16;
       const center = rect.width * .5;
-      chain.segmentLength = Math.min(24, Math.max(17, rect.height * .036));
+      const length = Math.min(24, Math.max(17, rect.height * .036));
+      chain.segmentLength = window.matchMedia(TOUCH_LAYOUT_QUERY).matches ? length * .8 : length;
       for (const [i, node] of chain.nodes.entries()) {
         node.x += center - oldCenter;
         node.oldX += center - oldCenter;

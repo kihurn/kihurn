@@ -1,5 +1,6 @@
 export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
+export const TOUCH_LAYOUT_QUERY = "(hover: none) and (pointer: coarse)";
 
 export function normalizeThemeMode(raw: string | null | undefined): ThemeMode {
   if (raw === "light" || raw === "dark" || raw === "system") return raw;

@@ -391,6 +391,14 @@
   margin: 0;
 }
 
+.lab__wheel-hint {
+  position: absolute;
+  z-index: 6;
+  inset-inline: 0;
+  inset-block-end: calc(var(--s-24) + var(--s-40) + var(--s-8));
+  margin-inline: auto;
+}
+
 .lab__step {
   width: var(--s-40);
   height: var(--s-40);

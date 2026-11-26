@@ -9,6 +9,7 @@ import { ChromeBehaviors } from "@/components/chrome/ChromeBehaviors";
 import { GlobalDotField } from "@/components/chrome/GlobalDotField";
 import { projects } from "@/content/projects";
 import { NowPlayingProvider } from "@/components/chrome/NowPlayingProvider";
+import { TOUCH_LAYOUT_QUERY } from "@/lib/chrome";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kihurn.vercel.app"),
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#1e1e1e" };
 
-const themeScript = `try{var t=localStorage.getItem("theme")||"dark";var r=t==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(t==="light"?"light":"dark");document.documentElement.dataset.theme=r;document.documentElement.dataset.themeMode=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",r==="light"?"#d6d6d5":"#1e1e1e");if(localStorage.getItem("telemetry")==="hidden")document.documentElement.dataset.telemetry="hidden";var rm=matchMedia("(prefers-reduced-motion: reduce)").matches;var au=new URLSearchParams(location.search).get("autostart")==="1";var nav=performance.getEntriesByType("navigation")[0];var rel=nav&&nav.type==="reload";if(!rm&&!au&&(rel||sessionStorage.getItem("kh:preloaded")!=="1"))document.documentElement.dataset.preloader="active";}catch(e){}`;
+const themeScript = `try{var t=localStorage.getItem("theme")||"dark";var r=t==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):(t==="light"?"light":"dark");document.documentElement.dataset.theme=r;document.documentElement.dataset.themeMode=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",r==="light"?"#d6d6d5":"#1e1e1e");if(localStorage.getItem("telemetry")==="hidden")document.documentElement.dataset.telemetry="hidden";var rm=matchMedia("(prefers-reduced-motion: reduce)").matches;var touch=matchMedia("${TOUCH_LAYOUT_QUERY}").matches;var au=new URLSearchParams(location.search).get("autostart")==="1";var nav=performance.getEntriesByType("navigation")[0];var rel=nav&&nav.type==="reload";if(!rm&&!touch&&!au&&(rel||sessionStorage.getItem("kh:preloaded")!=="1"))document.documentElement.dataset.preloader="active";}catch(e){}`;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

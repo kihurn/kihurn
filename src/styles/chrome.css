@@ -300,6 +300,27 @@ html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
 html[data-preloader="active"] {
   overflow: hidden;
 }
+html:not([data-preloader="active"]) .preloader {
+  display: none;
+}
+.mobile-wheel-hint {
+  display: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  .mobile-wheel-hint {
+    display: block;
+    padding: var(--s-4) var(--s-8);
+    margin: 0;
+    width: max-content;
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    color: var(--ink);
+    background: var(--chrome-bg);
+    pointer-events: none;
+    text-align: center;
+  }
+}
 .preloader {
   position: fixed;
   inset: 0;

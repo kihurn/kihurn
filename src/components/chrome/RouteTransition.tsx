@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { computeTornWipeOffsets, generateTornEdgePoints } from "@/lib/tornPaper";
+import { computeTornWipeOffsets, generateTornEdgePoints, type TornPoint } from "@/lib/tornPaper";
 
 export const NAVIGATE_EVENT = "kh:navigate";
 
@@ -27,70 +27,61 @@ export function RouteTransition() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    let width = 0;
+    let height = 0;
+    let edges: { width: number; seed: number; top: TornPoint[]; bottom: TornPoint[] } | undefined;
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = document.documentElement.clientWidth || window.innerWidth;
-      const h = window.innerHeight;
-      canvas.width = Math.max(1, Math.floor(w * dpr));
-      canvas.height = Math.max(1, Math.floor(h * dpr));
+      width = document.documentElement.clientWidth || window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.max(1, Math.floor(width * dpr));
+      canvas.height = Math.max(1, Math.floor(height * dpr));
       canvas.style.width = "100%";
       canvas.style.height = "100%";
+      ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
 
     const drawTornBand = (progress: number, seed: number) => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = canvas.width / dpr;
-      const h = canvas.height / dpr;
-
-      ctx.save();
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-
-      if (progress <= 0 || progress >= 1) {
-        ctx.restore();
-        return;
-      }
+      ctx.clearRect(0, 0, width, height);
+      if (progress <= 0 || progress >= 1) return;
 
       const isLight = document.documentElement.dataset.theme === "light";
-      const sheetColor = isLight ? "#d6d6d5" : "#1e1e1e";
-      const deckleEdgeColor = isLight ? "rgba(30,30,30,0.28)" : "rgba(214,214,213,0.32)";
-      const { topEdgeY, bottomEdgeY } = computeTornWipeOffsets(progress, h, 44);
-
-      const topPts = generateTornEdgePoints(w, topEdgeY, seed, 24, 48);
-      const bottomPts = generateTornEdgePoints(w, bottomEdgeY, seed + 3.7, 24, 48);
-
-      ctx.beginPath();
-      ctx.moveTo(topPts[0].x, topPts[0].y);
-      for (let i = 1; i < topPts.length; i++) {
-        ctx.lineTo(topPts[i].x, topPts[i].y);
+      const lip = Math.min(37, Math.max(14, width * .024));
+      const { topEdgeY, bottomEdgeY } = computeTornWipeOffsets(progress, height, 78);
+      if (!edges || edges.width !== width || edges.seed !== seed) {
+        const amplitude = Math.min(24, width * .033);
+        edges = {
+          width, seed,
+          top: generateTornEdgePoints(width, 0, seed, amplitude, 64),
+          bottom: generateTornEdgePoints(width, 0, seed + 3.7, amplitude, 64),
+        };
       }
-      for (let i = bottomPts.length - 1; i >= 0; i--) {
-        ctx.lineTo(bottomPts[i].x, bottomPts[i].y);
-      }
-      ctx.closePath();
 
-      ctx.fillStyle = sheetColor;
-      ctx.fill();
+      const { top, bottom } = edges;
+      const paintSheet = (color: string, inset: number) => {
+        ctx.beginPath();
+        top.forEach(({ x, y }, i) => {
+          const edge = topEdgeY + y + inset * (1 + .29 * Math.sin(i * .29 + seed));
+          if (i === 0) ctx.moveTo(x, edge);
+          else ctx.lineTo(x, edge);
+        });
+        for (let i = bottom.length - 1; i >= 0; i--) {
+          const { x, y } = bottom[i];
+          ctx.lineTo(x, bottomEdgeY + y - inset * (1 + .23 * Math.cos(i * .25 + seed)));
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      };
 
-      ctx.strokeStyle = deckleEdgeColor;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(topPts[0].x, topPts[0].y);
-      for (let i = 1; i < topPts.length; i++) ctx.lineTo(topPts[i].x, topPts[i].y);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(bottomPts[0].x, bottomPts[0].y);
-      for (let i = 1; i < bottomPts.length; i++) ctx.lineTo(bottomPts[i].x, bottomPts[i].y);
-      ctx.stroke();
-
-      ctx.restore();
+      paintSheet(isLight ? "#383633" : "#eae9e5", 0);
+      paintSheet(isLight ? "#e4e1db" : "#151515", lip);
     };
 
     const runTransition = (href: string) => {
@@ -111,8 +102,8 @@ export function RouteTransition() {
       router.prefetch(href);
       const seed = (performance.now() % 100) * 0.13 + 1.2;
 
-      const coverDur = 205;
-      const revealDur = 235;
+      const coverDur = 365;
+      const revealDur = 470;
       const t0 = performance.now();
 
       const animateReveal = () => {
@@ -145,7 +136,7 @@ export function RouteTransition() {
           };
           pendingRef.current = { path: target.pathname, reveal: finishRoute, scroll: !target.hash };
           if (!target.hash) window.scrollTo({ top: 0, behavior: "instant" });
-          safetyTimerRef.current = window.setTimeout(finishRoute, 260);
+          safetyTimerRef.current = window.setTimeout(finishRoute, 1200);
           router.push(href, { scroll: Boolean(target.hash) });
         }
       };

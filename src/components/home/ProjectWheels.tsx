@@ -291,6 +291,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
                 </span>
               </a>
             </div>
+            {hint && <p className="mobile-wheel-hint text-mono-meta">↔ Swipe to browse projects</p>}
           </div>
 
           <div className="hv2__toolbar">
@@ -329,11 +330,6 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
             </button>
           </div>
 
-          {hint ? (
-            <p className="hv2__hint text-mono-meta" aria-hidden="true">
-              SWIPE:: TO BROWSE
-            </p>
-          ) : null}
           <p className="u-sr-only" aria-live="polite">
             {`${p.name}, ${active + 1} of ${N}`}
           </p>

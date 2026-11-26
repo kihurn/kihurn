@@ -6,7 +6,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import type { GigEvent } from "@/content/gigs";
 import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 
-type Slide = GigEvent & { photo?: string };
+type Slide = Pick<GigEvent, "slug" | "name"> & { photo?: string };
 
 export function EventShowcase({ slides }: { slides: Slide[] }) {
   const stack = useRef<HTMLButtonElement>(null);
@@ -107,16 +107,15 @@ export function EventShowcase({ slides }: { slides: Slide[] }) {
       >
         {slides.map((slide, position) => (
           <span key={slide.slug} className="event" data-event data-stack-position={(position - index + slides.length) % slides.length} aria-hidden="true">
-            <OptionalPhoto className="event__photo" src={slide.photo} width={960} height={600} alt="" sizes="(max-width: 860px) 84vw, 688px">
-              <Image className="event__photo" src="/placeholder/event.svg" width={960} height={600} alt="" unoptimized />
-            </OptionalPhoto>
+            <span className="event__mat">
+              <OptionalPhoto className="event__photo" src={slide.photo} width={960} height={600} alt="" sizes="(max-width: 860px) 84vw, 688px">
+                <Image className="event__photo" src="/placeholder/event.svg" width={960} height={600} alt="" unoptimized />
+              </OptionalPhoto>
+            </span>
             <span className="event__caption">{slide.name}</span>
           </span>
         ))}
       </button>
-      <p className="gig-showcase__credit text-body" aria-live="polite">
-        <strong>{active.role}</strong>{active.detail && <> · {active.detail}</>}
-      </p>
     </section>
   );
 }

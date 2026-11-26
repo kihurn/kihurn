@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 
 const LABELS = ["Home", "Lab", "About", "Gigs", "Contact"];
 
+test("touch devices skip the opening loader and show the swipe hints", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "touch layout only");
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      if (document.documentElement?.hasAttribute("data-preloader")) {
+        document.documentElement.dataset.sawStartupPreloader = "true";
+      }
+    });
+    observer.observe(document, { attributes: true, subtree: true, attributeFilter: ["data-preloader"] });
+  });
+  for (const path of ["/", "/lab"]) {
+    await page.goto(path);
+    await expect(page.getByText(/Swipe to browse projects/)).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-preloaded", "true");
+    await expect(page.locator("html")).not.toHaveAttribute("data-saw-startup-preloader", "true");
+  }
+});
+
 test("wordmark reads KIHURN.", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("header .wordmark")).toHaveText("KIHURN.");

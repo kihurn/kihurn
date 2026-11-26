@@ -90,8 +90,16 @@ test.describe("Gigs", () => {
     else await stack.click();
     await expect(stack).toHaveAccessibleName(/Circus Funtasia/);
     await expect(cards.filter({ hasText: "WNBF Malaysia 2025" })).toHaveAttribute("data-stack-position", "4");
-    await expect(page.getByText("Event Crew & Production", { exact: true })).toBeVisible();
-    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next event" }).click();
+    await expect(page.getByText("Event Crew & Production", { exact: true })).toHaveCount(0);
+    for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next event" }).click();
+    const lawBall = cards.filter({ hasText: "Law Ball 2025" });
+    await expect(lawBall).toHaveAttribute("data-stack-position", "0");
+    await expect.poll(() => lawBall.evaluate((card) => {
+      const photo = card.querySelector(".event__photo")!.getBoundingClientRect();
+      const caption = card.querySelector(".event__caption")!.getBoundingClientRect();
+      return caption.top >= photo.bottom - 1 && caption.bottom <= card.getBoundingClientRect().bottom + 1;
+    })).toBe(true);
+    await page.getByRole("button", { name: "Next event" }).click();
     await expect(stack).toHaveAccessibleName(/ImagineHack 2026/);
     await page.getByRole("button", { name: "Next event" }).click();
     await expect(stack).toHaveAccessibleName(/WNBF Malaysia 2025/);

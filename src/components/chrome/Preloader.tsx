@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TOUCH_LAYOUT_QUERY } from "@/lib/chrome";
 
 const SESSION_KEY = "kh:preloaded";
 
 function shouldShowPreloader(): boolean {
   if (typeof window === "undefined") return false;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  if (window.matchMedia(TOUCH_LAYOUT_QUERY).matches) return false;
   if (new URLSearchParams(window.location.search).get("autostart") === "1") return false;
 
   const navEntries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];

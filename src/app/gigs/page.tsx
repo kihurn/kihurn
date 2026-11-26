@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Event crew work and studio practice by Wong Ki Hurn.",
 };
 
-const slides = events.map((event) => ({ ...event, photo: availableMedia(media.gigs[event.slug]) }));
+const slides = events.map(({ slug, name }) => ({ slug, name, photo: availableMedia(media.gigs[slug]) }));
 
 export default function GigsPage() {
   return (
