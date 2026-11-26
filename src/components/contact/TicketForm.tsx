@@ -95,7 +95,10 @@ export function TicketForm({ email }: { email: string }) {
 
         <div className="postcard__body">
           <div className="postcard__address">
-            <span className="postcard__stamp text-mono-meta" aria-hidden="true">KH</span>
+            <span className="postcard__stamp" aria-hidden="true">
+              <span className="postcard__stamp-mark">KH</span>
+              <span className="postcard__stamp-origin">KL · MY</span>
+            </span>
             <fieldset className="ticket__types" disabled={sent}>
               <legend className="text-label">RE :: What is this about?</legend>
               <div className="ticket__pills">
