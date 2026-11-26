@@ -19,6 +19,7 @@ function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
 
 const faster = cubicBezier(.25, .88, .32, 1);
 const slower = cubicBezier(.76, .04, .24, 1);
+const PAPER_SEPARATION = .12;
 
 function waveProfile(phase: number) {
   return Array.from({ length: 101 }, (_, x) =>
@@ -30,8 +31,8 @@ function waveProfile(phase: number) {
 }
 
 const profiles = {
-  cover: { paper: waveProfile(.65), base: waveProfile(.15) },
-  reveal: { paper: waveProfile(1.1), base: waveProfile(.6) },
+  cover: { paper: waveProfile(.4), base: waveProfile(.15) },
+  reveal: { paper: waveProfile(.85), base: waveProfile(.6) },
 };
 
 export function waveAmplitude(progress: number) {
@@ -44,8 +45,11 @@ export function curtainPath(phase: CurtainPhase, layer: CurtainLayer, progress: 
   if (progress <= 0) return `M0 100H100${close}`;
   if (progress >= 1) return `M0 0H100${close}`;
 
-  const leads = layer === (phase === "cover" ? "paper" : "base");
-  const baseline = 100 * (1 - (leads ? faster : slower)(progress));
+  const baseProgress = (phase === "cover" ? slower : faster)(progress);
+  const eased = layer === "base"
+    ? baseProgress
+    : baseProgress + ((phase === "cover" ? faster : slower)(progress) - baseProgress) * PAPER_SEPARATION;
+  const baseline = 100 * (1 - eased);
   const amplitude = waveAmplitude(progress);
   const profile = profiles[phase][layer];
   let path = `M0 ${(baseline + amplitude * profile[0]).toFixed(3)}`;
