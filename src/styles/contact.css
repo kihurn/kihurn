@@ -115,13 +115,14 @@
 .ticket__field :is(input, textarea)::placeholder { color: #615d56; }
 .ticket__field input:focus { outline: 0; }
 .ticket__field textarea {
-  --ruling: 1.85rem;
+  --ruling: 30px;
   display: block;
   min-block-size: calc(5 * var(--ruling));
   line-height: var(--ruling);
   padding-block: 0;
   resize: vertical;
-  background-image: repeating-linear-gradient(to bottom, transparent 0 calc(var(--ruling) - 1px), var(--letter-hairline) calc(var(--ruling) - 1px) var(--ruling));
+  background-image: linear-gradient(to bottom, transparent 24px, var(--letter-hairline) 24px 25px, transparent 25px);
+  background-size: 100% var(--ruling);
 }
 .ticket__field textarea:focus-visible { outline: 1px solid var(--letter-ink); outline-offset: 4px; }
 .ticket__field textarea[aria-invalid="true"] { --letter-hairline: #922a197a; }
@@ -257,24 +258,29 @@
 .ticket[data-state="dispatched"] .stub-paperclip { display: none; }
 
 @media (width >= 48rem) {
-  .contact-page { --clip-overhang: 7rem; --clip-width: 14.5rem; }
+  .contact-page {
+    --letter-measure: 680px;
+    --clip-width: clamp(12.5rem, calc(16vw + 5rem), 14.5rem);
+    --clip-overlap: 28px;
+    --clip-overhang: calc(var(--clip-width) - var(--clip-overlap));
+  }
   .contact-page > .page__head, .ticket:not([data-state="dispatched"]) {
     width: min(calc(100% - var(--clip-overhang) - .75rem), var(--letter-measure));
     position: relative;
     inset-inline-end: calc((var(--clip-overhang) + .75rem) / 2);
   }
-  .ticket:not([data-state="dispatched"]) .letter-sheet {
-    padding-inline-end: calc(var(--clip-width) - var(--clip-overhang) + 1rem);
-  }
-  .letter-sheet__meta, .ticket__submit { margin-inline-end: calc(clamp(1.1rem, 4.8vw, 3.25rem) - (var(--clip-width) - var(--clip-overhang) + 1rem)); }
+  .contact-page .page__intro { max-inline-size: none; }
+  .letter-sheet { padding: 2rem 2.5rem; gap: 1.125rem; }
+  .ticket__pills { flex-wrap: nowrap; column-gap: clamp(.45rem, 1.2vw, .85rem); }
+  .ticket__radio { white-space: nowrap; }
   .ticket:not([data-state="dispatched"]) .ticket__side {
     position: absolute;
-    inset-block-start: 9rem;
+    inset-block-start: 165px;
     inset-inline-end: calc(-1 * var(--clip-overhang));
     width: var(--clip-width);
-    transform: rotate(1.8deg);
+    transform: rotate(2deg);
   }
-  .ticket:not([data-state="dispatched"]) .stub-paperclip { left: .94rem; }
+  .ticket:not([data-state="dispatched"]) .stub-paperclip { left: calc(var(--clip-overlap) - 6px); }
   .ticket[data-state="dispatched"] { min-block-size: 29rem; }
 }
 @media (width < 48rem) {

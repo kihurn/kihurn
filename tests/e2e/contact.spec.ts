@@ -3,19 +3,31 @@ import { expect, test, type Page } from "@playwright/test";
 const hydrated = (page: Page) => page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
 
 test("the stamp stays clear of the ticket and the phone layout centers it below the sheet", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/contact?autostart=1");
   await hydrated(page);
   const sheet = (await page.locator(".letter-sheet").boundingBox())!;
   const ticket = (await page.locator(".stub").boundingBox())!;
   const stamp = (await page.locator(".postcard__stamp-paper").boundingBox())!;
   expect(ticket.y).toBeGreaterThan(stamp.y + stamp.height);
-  expect(sheet.width).toBeLessThanOrEqual(620);
   if (page.viewportSize()!.width < 768) {
     expect(ticket.y).toBeGreaterThan(sheet.y + sheet.height);
     expect(Math.abs(sheet.x + sheet.width / 2 - ticket.x - ticket.width / 2)).toBeLessThan(2);
   } else {
-    expect(ticket.x).toBeLessThan(sheet.x + sheet.width);
-    expect(ticket.x + ticket.width).toBeGreaterThan(sheet.x + sheet.width);
+    const header = (await page.locator(".contact-page .page__head").boundingBox())!;
+    const side = page.locator(".ticket__side");
+    expect(sheet.width).toBe(header.width);
+    expect(sheet.width).toBeLessThanOrEqual(680);
+    if (page.viewportSize()!.width >= 1024) expect(sheet.width).toBe(680);
+    expect(sheet.x).toBe(header.x);
+    expect(await side.evaluate((element) => element.parentElement!.clientWidth - (element as HTMLElement).offsetLeft)).toBe(28);
+    expect(await side.evaluate((element) => (element as HTMLElement).offsetTop)).toBe(165);
+    for (const selector of [".letter-sheet__fields", "textarea[name=message]"]) {
+      const control = (await page.locator(selector).boundingBox())!;
+      expect(control.x + control.width).toBeLessThan(ticket.x);
+    }
+    const optionRows = await page.locator(".ticket__radio").evaluateAll((options) => options.map((option) => option.getBoundingClientRect().top));
+    expect(new Set(optionRows).size).toBe(1);
   }
 });
 
