@@ -56,6 +56,50 @@ test("the centre link opens the project's entry", async ({ page }) => {
   await expect(link).toHaveAttribute("href", /^\/lab/);
 });
 
+test("the active project screen opens for inspection and closes from the screen, backdrop, Escape or scrolling", async ({ page, isMobile }) => {
+  await page.goto("/?autostart=1");
+  await hydrated(page);
+  const stage = page.locator("[data-wheels]");
+  const center = page.locator("[data-wheels-center]");
+  const inspect = page.getByRole("button", { name: "Inspect project screen" });
+  const box = (await stage.boundingBox())!;
+  const x = box.x + box.width * 0.31;
+  const y = box.y + box.height * (isMobile ? 0.33 : 0.50);
+  const press = (px: number, py: number) => isMobile ? page.touchscreen.tap(px, py) : page.mouse.click(px, py);
+  if (!isMobile) {
+    await page.mouse.move(x, y);
+    await expect(stage).toHaveAttribute("data-plate-hover", "");
+    await expect(stage).toHaveAttribute("data-state", "rest");
+  }
+
+  await press(x, y);
+  await expect(inspect).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => center.evaluate((node) => new DOMMatrix(getComputedStyle(node).transform).m41)).toBeGreaterThan(2);
+  await press(x, y);
+  await expect(stage).toHaveAttribute("data-state", "rest");
+
+  await inspect.focus();
+  await page.keyboard.press("Enter");
+  await expect(stage).toHaveAttribute("data-state", "inspect");
+  await press(box.x + box.width * 0.07, box.y + box.height * 0.68);
+  await expect(stage).toHaveAttribute("data-state", "rest");
+
+  await inspect.focus();
+  await page.keyboard.press("Enter");
+  await expect(stage).toHaveAttribute("data-state", "inspect");
+  await page.keyboard.press("Escape");
+  await expect(stage).toHaveAttribute("data-state", "rest");
+
+  await inspect.focus();
+  await page.keyboard.press("Enter");
+  await expect(stage).toHaveAttribute("data-state", "inspect");
+  await page.evaluate(() => window.scrollTo({ top: 120, behavior: "instant" }));
+  await expect(stage).toHaveAttribute("data-state", "rest");
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.getByRole("button", { name: /index/i }).click();
+  await expect(page.locator("#home-index")).toBeInViewport();
+});
+
 test("the page does not scroll-jack the wheel", async ({ page }) => {
   await page.goto("/");
   await hydrated(page);

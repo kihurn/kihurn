@@ -9,7 +9,7 @@ export const media = {
     "campus-network": "/images/projects/campus-network.webp",
     "pneumonia-cnn": "/images/projects/pneumonia-cnn.webp",
   } as Readonly<Record<string, string | undefined>>,
-  portrait: "/images/portrait.jpg",
+  portrait: "/images/about-profile.png",
   gigs: {
     "wnbf-malaysia-2025": "/images/gigs/WNBF.jpg",
     "circus-funtasia": "/images/gigs/CircusFantasia.jpg",

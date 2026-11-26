@@ -119,7 +119,7 @@ export function AboutBoard() {
                 </svg>
                 <div className="frank__stamp" style={{ "--print": "url(#stamp-print-kh)" } as React.CSSProperties}>
                   <div className="frank__photo u-no-drag">
-                    <OptionalPhoto src={availableMedia(media.portrait)} alt="Wong Ki Hurn" width={400} height={480} className="stamp-photo">
+                    <OptionalPhoto src={availableMedia(media.portrait)} alt="Wong Ki Hurn" width={1000} height={1200} className="stamp-photo" sizes="184px" loading="eager">
                       <HalftonePortrait variant="stamp" />
                     </OptionalPhoto>
                   </div>

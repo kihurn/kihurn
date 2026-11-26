@@ -49,10 +49,15 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   const reduced = useSyncExternalStore(subscribeReduced, getReducedSnapshot, () => false);
 
   const stage = useRef<HTMLElement>(null);
+  const center = useRef<HTMLDivElement>(null);
+  const shade = useRef<HTMLDivElement>(null);
+  const hitPlate = useRef<((x: number, y: number) => boolean) | null>(null);
   const activeRef = useRef(0);
   const lastInput = useRef(0);
   const onScreen = useRef(false);
+  const orbitInputUntil = useRef(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [focused, setFocused] = useState(false);
   const glSimRef = useRef<WheelSimState>({
     pos: 0,
     vel: 0,
@@ -63,6 +68,10 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     pointerActive: false,
     dragging: false,
     stacked: false,
+    settled: true,
+    pull: 1,
+    selected: 0,
+    focused: false,
   });
 
   const sim = useRef({
@@ -83,10 +92,24 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   const [hint, setHint] = useState(true);
 
   const showList = reduced || viewMode === "list";
+  const changeFocus = useCallback((next: boolean) => {
+    if (glSimRef.current.focused === next) return;
+    glSimRef.current.focused = next;
+    lastInput.current = performance.now();
+    setFocused(next);
+  }, []);
+
+  const beginOrbit = useCallback(() => {
+    const now = performance.now();
+    lastInput.current = now;
+    orbitInputUntil.current = now + 150;
+    changeFocus(false);
+  }, [changeFocus]);
+
   const canRefresh = useCallback(() => {
-    const s = sim.current;
-    return onScreen.current && !document.hidden && !s.dragging
-      && Math.abs(s.target - s.pos) < 0.01 && performance.now() - lastInput.current > 220;
+    const gl = glSimRef.current;
+    return onScreen.current && !document.hidden && gl.settled && !gl.focused
+      && !sim.current.dragging && performance.now() - lastInput.current > 220;
   }, []);
 
   useEffect(() => {
@@ -111,19 +134,32 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       glSim.stacked = stacked;
     };
 
-    const frame = () => {
-      s.pos += (s.target - s.pos) * 0.11;
-      s.pvx *= 0.88;
-      s.pvy *= 0.88;
-
-      if (!s.dragging && Math.abs(s.vel) > 0.0004) {
-        s.target += s.vel;
-        s.vel *= 0.92;
-        if (Math.abs(s.vel) < 0.0004) s.target = Math.round(s.target);
+    let lastFrame = performance.now();
+    const frame = (now: number) => {
+      const dt = Math.max(0.001, Math.min(0.05, (now - lastFrame) / 1000));
+      lastFrame = now;
+      const dragging = s.dragging && s.moved > 6;
+      const atRest = !dragging && now >= orbitInputUntil.current && Math.abs(s.target - s.pos) < 0.008;
+      const tuck = glSim.pull > 0 && !atRest;
+      const previous = s.pos;
+      if (!tuck) {
+        s.pos += (s.target - s.pos) * (1 - Math.pow(0.89, dt * 60));
       }
+      const speed = (s.pos - previous) / dt;
+      glSim.settled = atRest && Math.abs(speed) < 0.07;
+      if (glSim.settled) {
+        s.pos = s.target;
+        glSim.selected = wrapIndex(Math.round(s.pos), N);
+      }
+      const pullTarget = Number(glSim.settled);
+      glSim.pull += (pullTarget - glSim.pull) * (1 - Math.exp(-dt * (pullTarget ? 12 : 32)));
+      if (Math.abs(glSim.pull - pullTarget) < 0.018) glSim.pull = pullTarget;
+      s.pvx *= Math.pow(0.88, dt * 60);
+      s.pvy *= Math.pow(0.88, dt * 60);
 
       glSim.pos = s.pos;
-      glSim.vel = s.vel;
+      glSim.vel = speed / 60;
+      glSim.dragging = dragging;
       glSim.pointerX = s.px;
       glSim.pointerY = s.py;
       glSim.pointerVelX = s.pvx;
@@ -150,11 +186,11 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     let lastRefresh = 0;
     const idleTimer = window.setInterval(() => {
       const now = performance.now();
-      if (canRefresh() && now - Math.max(lastRefresh, lastInput.current) >= 6000) {
+      if (canRefresh() && now - Math.max(lastRefresh, lastInput.current) >= 5000) {
         lastRefresh = now;
         setRefreshKey((key) => key + 1);
       }
-    }, 240);
+    }, 100);
 
     const rowPx = () => Math.max(120, H * 0.28);
     let snapTimer = 0;
@@ -164,7 +200,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     const hide = () => setHint(false);
 
     const onWheel = (e: WheelEvent) => {
-      noteInput();
+      beginOrbit();
       const sideways = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
       if (!sideways) return;
       e.preventDefault();
@@ -176,10 +212,10 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
 
     const onDown = (e: PointerEvent) => {
       noteInput();
+      s.moved = 0;
+      if (e.button !== 0 || !e.isPrimary) return;
       if ((e.target as HTMLElement).closest("a, button")) return;
       s.dragging = true;
-      glSim.dragging = true;
-      s.moved = 0;
       s.lastY = e.clientY;
       s.lastX = e.clientX;
       s.touch = e.pointerType === "touch";
@@ -190,7 +226,6 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
           el.setPointerCapture(e.pointerId);
         } catch {}
       }
-      el.classList.add("is-grabbing");
     };
 
     const onMove = (e: PointerEvent) => {
@@ -205,12 +240,16 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       s.py = ny;
 
       if (!s.dragging) return;
-      const dy = s.touch ? e.clientX - s.lastX : e.clientY - s.lastY;
+      const dx = e.clientX - s.lastX;
+      const dy = e.clientY - s.lastY;
       const now = performance.now();
       s.lastY = e.clientY;
       s.lastX = e.clientX;
-      s.moved += Math.abs(dy);
-      const d = -dy / rowPx();
+      s.moved += Math.hypot(dx, dy);
+      if (s.moved <= 6) return;
+      beginOrbit();
+      el.classList.add("is-grabbing");
+      const d = -(s.touch ? dx : dy) / rowPx();
       s.target += d;
       s.vel = (d / Math.max(1, now - s.lastT)) * 16;
       s.lastT = now;
@@ -228,23 +267,33 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
           if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
         } catch {}
       }
-      s.target += s.vel * 8;
+      if (s.moved > 6) s.target += s.vel * 8;
       s.vel = 0;
       snap();
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (s.moved > 6 || target?.closest("a, button")) return;
+      if (glSim.focused) changeFocus(false);
+      else if (glSim.settled && hitPlate.current?.(e.clientX, e.clientY)) changeFocus(true);
     };
 
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof Element ? e.target : null;
       if (t && (t.closest("input, textarea, dialog") || document.documentElement.classList.contains("is-overlay"))) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "ArrowRight") {
+      if (e.key === "Escape" && glSim.focused) {
         e.preventDefault();
-        noteInput();
+        changeFocus(false);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        beginOrbit();
         s.target = Math.round(s.target) + 1;
         hide();
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        noteInput();
+        beginOrbit();
         s.target = Math.round(s.target) - 1;
         hide();
       } else if (e.key === "Enter" && document.activeElement === el) {
@@ -256,6 +305,10 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       glSim.pointerActive = false;
       noteInput();
     };
+    const onScroll = () => {
+      onLeave();
+      beginOrbit();
+    };
 
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("pointerdown", onDown);
@@ -263,8 +316,9 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     el.addEventListener("pointerleave", onLeave);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
+    el.addEventListener("click", onClick);
     window.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", onLeave, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("visibilitychange", onLeave);
     return () => {
       cancelAnimationFrame(raf);
@@ -282,11 +336,12 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       el.removeEventListener("pointerleave", onLeave);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("click", onClick);
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("scroll", onLeave);
+      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("visibilitychange", onLeave);
     };
-  }, [showList, N, items, canRefresh]);
+  }, [showList, N, items, canRefresh, changeFocus, beginOrbit]);
 
   const p = items[active];
   const { displayText: scrambledIndex } = useScrambleText(`N°${pad2(active + 1)} / ${pad2(N)}`, {
@@ -310,7 +365,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   });
 
   const stepTo = (idx: number) => {
-    lastInput.current = performance.now();
+    beginOrbit();
     const s = sim.current;
     s.target = wheelStepDirection(s.pos, idx, N);
     setHint(false);
@@ -325,15 +380,16 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
           className="hv2__stage"
           data-wheels
           data-lenis-prevent
-          data-state="rest"
+          data-state={focused ? "inspect" : "rest"}
           tabIndex={0}
           role="group"
           aria-roledescription="carousel"
           aria-label="Selected work, two linked Three.js wheels. Drag to turn, left and right arrow keys browse, the center link opens the project."
         >
-          <PressWheelCanvas items={items} simRef={glSimRef} />
+          <div ref={shade} className="hv2__shade" aria-hidden="true" />
+          <PressWheelCanvas items={items} simRef={glSimRef} centerRef={center} shadeRef={shade} hitPlateRef={hitPlate} />
 
-          <div className="hv2__center" data-wheels-center>
+          <div ref={center} className="hv2__center" data-wheels-center>
             <p className="hv2__eyebrow text-label u-mono" aria-label={`Project ${active + 1} of ${N}`}>
               {scrambledIndex}
             </p>
@@ -369,6 +425,17 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
             {hint && <p className="mobile-wheel-hint text-mono-meta">↔ Swipe to browse projects</p>}
           </div>
 
+          <button
+            type="button"
+            className="chip text-mono-sm hv2__toolbtn hv2__inspect-key"
+            aria-pressed={focused}
+            onClick={() => {
+              if (focused || glSimRef.current.settled) changeFocus(!focused);
+            }}
+          >
+            Inspect project screen
+          </button>
+
           <div className="hv2__toolbar">
             <div className="hv2__stepper">
               <button
@@ -393,6 +460,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
               className="chip text-mono-sm hv2__toolbtn"
               data-wheel-toggle
               onClick={() => {
+                changeFocus(false);
                 const target = document.getElementById("home-index");
                 if (target) {
                   target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
@@ -401,7 +469,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
                 }
               }}
             >
-              INDEX LIST ↓
+              INDEX ↓
             </button>
           </div>
 

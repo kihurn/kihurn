@@ -61,9 +61,13 @@
 
 .hv2{position:relative;isolation:isolate}
 .hv2__stage{overscroll-behavior:auto;position:relative;height:100svh;min-height:36rem;overflow:clip;isolation:isolate}
+.hv2__shade{position:absolute;inset:0;z-index:0;background:#08090a;opacity:0;pointer-events:none}
 .hv2__glcanvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1}
-.hv2__center{display:flex;flex-direction:column;align-items:center;gap:var(--s-10)}
-.hv2__stage.is-stacked .hv2__center{top:70%}
+.hv2__stage .hv2__center{display:flex;flex-direction:column;align-items:center;gap:var(--s-10);max-inline-size:min(280px,24vw)}
+.hv2__stage.is-stacked .hv2__center{top:70%;max-inline-size:min(23rem,82vw)}
+.hv2__stage[data-state="inspect"]:not(.is-grabbing){cursor:default}
+.hv2__stage[data-plate-hover]:not(.is-grabbing){cursor:zoom-in}
+.hv2__stage[data-state="inspect"][data-plate-hover]:not(.is-grabbing){cursor:zoom-out}
 .hv2__eyebrow{margin:0}
 .hv2__stage .hv2__title{max-inline-size:min(280px,100%);white-space:normal;overflow-wrap:anywhere;text-wrap:balance;line-height:1.15;padding-block:.06em;margin:0}
 .hv2__title-word{display:inline-block;position:relative;max-inline-size:100%;vertical-align:top}
@@ -71,11 +75,14 @@
 .hv2__title-word>span+span{position:absolute;inset:0;overflow:clip}
 .hv2__chips{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s-8)}
 .hv2__ch{margin-block:-.18em;padding-block:.18em}
-.hv2__meta{margin:var(--s-2) 0 0;text-transform:uppercase;letter-spacing:.06em}
+.hv2__meta{margin:var(--s-2) 0 0;text-transform:uppercase;letter-spacing:.06em;overflow-wrap:anywhere}
 .hv2__ctarow{margin-top:var(--s-8);pointer-events:auto}
-.hv2__toolbar{position:absolute;inset-block-end:var(--s-20);inset-inline:var(--margin);z-index:4;display:flex;justify-content:flex-end;align-items:center;gap:var(--s-12);pointer-events:none}
+.hv2__toolbar{position:absolute;inset-block-end:var(--s-20);inset-inline:var(--margin);z-index:4;display:flex;align-items:center;pointer-events:none}
 .hv2__stepper{display:flex;gap:var(--s-8)}
+.hv2__toolbar>[data-wheel-toggle]{position:absolute;inset-inline-start:50%;translate:-50% 0}
 .hv2__toolbtn{pointer-events:auto;cursor:pointer;border:1px solid var(--line);background:var(--chrome-bg);color:var(--ink)}
 .hv2__toolbtn:hover,.hv2__toolbtn:focus-visible{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.hv2__inspect-key{position:absolute;z-index:4;inset-block-end:calc(var(--s-20) + 2.5rem);inset-inline-start:50%;translate:-50% 0}
+.hv2__inspect-key:not(:focus-visible){clip-path:inset(50%);pointer-events:none}
 .hv2__classic-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--s-16)}
 

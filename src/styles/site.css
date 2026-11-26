@@ -29,7 +29,6 @@ html.lenis,html.lenis body{height:auto}.lenis:not(.lenis-autoToggle).lenis-stopp
 .hv2__eyebrow,.hv2__title,.hv2__chiptext{margin:0}
 @media (prefers-reduced-motion:reduce){.hv2__plate{transition:none}}
 .stamp-photo,.project-photo{display:block;width:100%;height:100%;object-fit:cover}
-.stamp-photo{filter:grayscale(1) contrast(1.24)}
 .project-photo,.event__photo{filter:grayscale(.8) contrast(1.06);transition:filter .2s ease}
 .event__photo{aspect-ratio:8/5;object-fit:cover}
 @media (hover:hover) and (pointer:fine){.project-photo:hover,.event:hover .event__photo{filter:none}}

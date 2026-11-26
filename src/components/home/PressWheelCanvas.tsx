@@ -22,7 +22,16 @@ export interface WheelSimState {
   pointerActive: boolean;
   dragging: boolean;
   stacked: boolean;
+  settled: boolean;
+  pull: number;
+  selected: number;
+  focused: boolean;
 }
+
+const PLATE_WIDTH = 3.2;
+const PLATE_HEIGHT = 1.8;
+const PLATE_ASPECT = PLATE_WIDTH / PLATE_HEIGHT;
+const PLATE_CORNER = 0.07;
 
 function detectSoftwareGl(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
   try {
@@ -117,6 +126,7 @@ function createHalo() {
       uInfluence: { value: 0 },
       uPixelRatio: { value: 1 },
       uInk: { value: new THREE.Color() },
+      uOpacity: { value: 0.3 },
     },
     vertexShader: `
       uniform float uTime;
@@ -135,15 +145,16 @@ function createHalo() {
         vAlpha = (0.25 + 0.75 * position.z) * smoothstep(0.14, 0.7, radius)
           * (1.0 - smoothstep(0.69, 1.0, radius)) * (0.18 + 0.10 * ripple);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(point, 0.0, 1.0);
-        gl_PointSize = (1.5 + position.z * 1.0) * uPixelRatio;
+        gl_PointSize = (1.2 + position.z * 0.85) * uPixelRatio;
       }
     `,
     fragmentShader: `
       uniform vec3 uInk;
+      uniform float uOpacity;
       varying float vAlpha;
       void main() {
         float edge = 1.0 - smoothstep(0.29, 0.5, length(gl_PointCoord - 0.5));
-        gl_FragColor = vec4(uInk, vAlpha * edge);
+        gl_FragColor = vec4(uInk, vAlpha * edge * uOpacity);
         #include <colorspace_fragment>
       }
     `,
@@ -157,13 +168,13 @@ function createHalo() {
 const PLATE_VERTEX_SHADER = `
   varying vec2 vUv;
   uniform vec2 uVel;
-  uniform float uHoverMix;
+  uniform float uFocus;
 
   void main() {
     vUv = uv;
     vec3 pos = position;
-    pos.z *= 1.0 - 0.73 * uHoverMix;
-    pos.z += (uv.y - 0.5) * uVel.y * 0.18 + (uv.x - 0.5) * uVel.x * 0.14;
+    pos.z *= 1.0 - 0.38 * uFocus;
+    pos.z += ((uv.y - 0.5) * uVel.y * 0.18 + (uv.x - 0.5) * uVel.x * 0.14) * (1.0 - uFocus);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
 `;
@@ -178,12 +189,21 @@ const PLATE_FRAGMENT_SHADER = `
   uniform float uActive;
   uniform float uGlitch;
   uniform float uTime;
-  uniform float uHoverMix;
+  uniform float uHover;
+  uniform float uFocus;
 
   void main() {
+    vec2 p = (vUv - 0.5) * vec2(${PLATE_ASPECT}, 1.0);
+    vec2 corner = abs(p) - vec2(${PLATE_ASPECT / 2}, 0.5) + ${PLATE_CORNER};
+    float edge = length(max(corner, 0.0)) + min(max(corner.x, corner.y), 0.0) - ${PLATE_CORNER};
+    float aa = max(fwidth(edge), 0.0005);
+    float mask = 1.0 - smoothstep(-aa, aa, edge);
+    if (mask <= 0.0) discard;
+
     float depth = texture2D(uDepth, vUv).r;
-    float surface = 1.0 - 0.94 * uHoverMix;
-    vec2 parallax = (uPointer - 0.5) * (depth - 0.5) * (0.018 * uActive * surface) + uVel * depth * 0.018;
+    float surface = 1.0 - uFocus;
+    vec2 parallax = (uPointer - 0.5) * (depth - 0.5) * (mix(0.012, 0.026, uFocus) * uActive)
+                  + uVel * depth * 0.018 * surface;
 
     float scan = sin(vUv.y * 140.0 + uTime * 22.0);
     float scanJitter = step(0.84, abs(scan)) * scan * uGlitch * surface * 0.003;
@@ -195,11 +215,18 @@ const PLATE_FRAGMENT_SHADER = `
     float b = texture2D(uMap, clamp(baseUv - vec2(chroma, 0.0), 0.002, 0.998)).b;
     float a = texture2D(uMap, baseUv).a;
 
-    vec2 edge = smoothstep(0.0, 0.06, min(vUv, 1.0 - vUv));
     float dim = mix(0.71, 1.0, uActive);
     float grain = fract(sin(dot(floor(vUv * vec2(640.0, 360.0)), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
     float finish = 1.0 + (grain * 0.075 - step(0.5, fract(vUv.y * 90.0)) * (0.032 + 0.043 * uGlitch)) * surface;
-    gl_FragColor = vec4(vec3(r, g, b) * dim * finish, a * uOpacity * mix(0.92, 1.0, edge.x * edge.y));
+    vec3 ink = vec3(r, g, b) * dim * finish;
+    if (uHover > 0.002 && edge > -0.045) {
+      float phase = atan(p.y, p.x) - uTime * 1.95;
+      float sweep = smoothstep(0.75, 0.998, cos(phase));
+      float line = 1.0 - smoothstep(0.001, 0.006 + aa, abs(edge + 0.006));
+      float bloom = (1.0 - smoothstep(0.0, 0.032, abs(edge + 0.006))) * sweep;
+      ink = mix(ink, vec3(0.91, 0.94, 1.0), uHover * min(0.93, line * (0.29 + 0.51 * sweep) + 0.27 * bloom));
+    }
+    gl_FragColor = vec4(ink, a * uOpacity * mask);
     #include <colorspace_fragment>
   }
 `;
@@ -207,15 +234,23 @@ const PLATE_FRAGMENT_SHADER = `
 export function PressWheelCanvas({
   items,
   simRef,
+  centerRef,
+  shadeRef,
+  hitPlateRef,
 }: {
   items: WheelItem[];
   simRef: React.RefObject<WheelSimState>;
+  centerRef: React.RefObject<HTMLDivElement | null>;
+  shadeRef: React.RefObject<HTMLDivElement | null>;
+  hitPlateRef: React.RefObject<((x: number, y: number) => boolean) | null>;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || items.length === 0) return;
+    const center = centerRef.current;
+    const shade = shadeRef.current;
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -254,7 +289,7 @@ export function PressWheelCanvas({
     rimLight.position.set(-5.0, -2.5, 4.5);
     scene.add(rimLight);
 
-    const photoGeo = new THREE.PlaneGeometry(3.2, 1.8, 24, 8);
+    const photoGeo = new THREE.PlaneGeometry(PLATE_WIDTH, PLATE_HEIGHT, 24, 8);
     const photoVertices = photoGeo.getAttribute("position");
     const cylinderRadius = 5.8;
     for (let i = 0; i < photoVertices.count; i++) {
@@ -268,9 +303,9 @@ export function PressWheelCanvas({
     const tileBodyMat = new THREE.MeshPhysicalMaterial({
       color: 0x161616,
       metalness: 0.28,
-      roughness: 0.22,
+      roughness: 0.24,
       clearcoat: 0.85,
-      clearcoatRoughness: 0.16,
+      clearcoatRoughness: 0.105,
       iridescence: 0.035,
       iridescenceIOR: 1.38,
       iridescenceThicknessMinimum: 185,
@@ -309,7 +344,8 @@ export function PressWheelCanvas({
           uVel: { value: new THREE.Vector2(0, 0) },
           uOpacity: { value: 1 },
           uActive: { value: 1 },
-          uHoverMix: { value: 0 },
+          uHover: { value: 0 },
+          uFocus: { value: 0 },
           uGlitch: { value: 0 },
           uTime: { value: 0 },
         },
@@ -383,6 +419,29 @@ export function PressWheelCanvas({
     let gpuFence: WebGLSync | null = null;
     let frameTime = performance.now();
     let elapsed = 0;
+    let focusIndex = -1;
+    let focusAmount = 0;
+    let hoverState = false;
+    const stage = canvas.parentElement;
+
+    const intersectsPlate = (index: number) => {
+      const plate = leftMeshes[index];
+      if (!plate?.visible) return false;
+      hits.length = 0;
+      raycaster.intersectObject(plate, false, hits);
+      const uv = hits[0]?.uv;
+      if (!uv) return false;
+      const dx = Math.max(0, Math.abs(uv.x - 0.5) * PLATE_ASPECT - PLATE_ASPECT / 2 + PLATE_CORNER);
+      const dy = Math.max(0, Math.abs(uv.y - 0.5) - 0.5 + PLATE_CORNER);
+      return dx * dx + dy * dy <= PLATE_CORNER * PLATE_CORNER;
+    };
+
+    hitPlateRef.current = (x, y) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.set((x - rect.left) / rect.width * 2 - 1, 1 - (y - rect.top) / rect.height * 2);
+      raycaster.setFromCamera(pointer, camera);
+      return intersectsPlate(simRef.current.selected);
+    };
 
     function afterDraw(cb: () => void) {
       if (disposed) return;
@@ -432,13 +491,27 @@ export function PressWheelCanvas({
       if (smoothGlitch < 0.005) smoothGlitch = 0;
 
       const { pointerX: px, pointerY: py, pointerVelX: vx, pointerVelY: vy } = s;
-      const selected = ((Math.round(pos) % N) + N) % N;
+      const focusTarget = Number(s.focused);
+      if (s.focused) focusIndex = s.selected;
+      const previousFocus = focusAmount;
+      focusAmount = THREE.MathUtils.lerp(focusAmount, focusTarget, 1 - Math.exp(-12.5 * dt));
+      if (Math.abs(focusTarget - focusAmount) < 0.002) focusAmount = focusTarget;
+      if (focusAmount === 0) focusIndex = -1;
+      if (previousFocus !== focusAmount && shade) shade.style.opacity = String(focusAmount);
+      if (center) {
+        const x = viewW * (stacked ? 0.025 : 0.192) * focusAmount;
+        const y = stacked ? viewH * 0.035 * focusAmount : 0;
+        const transform = focusAmount ? `translate3d(${x}px, ${y}px, 0)` : "";
+        if (center.style.transform !== transform) center.style.transform = transform;
+      }
+
+      const selected = s.selected;
       const pointerActive = s.pointerActive && !s.dragging;
       let plateHovered = false;
       let iconHovered = false;
       hoverTilt.set(0, 0);
       pointer.set(px * 2 - 1, py * 2 - 1);
-      if (pointerActive) {
+      if (pointerActive && s.settled) {
         raycaster.setFromCamera(pointer, camera);
         const icon = rightGroups[selected];
         hits.length = 0;
@@ -452,11 +525,11 @@ export function PressWheelCanvas({
             THREE.MathUtils.clamp(-local.y / 0.58, -1, 1) * tiltLimit,
             THREE.MathUtils.clamp(local.x / 0.58, -1, 1) * tiltLimit,
           );
-        } else {
-          hits.length = 0;
-          raycaster.intersectObject(leftMeshes[selected], false, hits);
-          plateHovered = hits.length > 0;
-        }
+        } else plateHovered = intersectsPlate(selected);
+      }
+      if (plateHovered !== hoverState) {
+        hoverState = plateHovered;
+        stage?.toggleAttribute("data-plate-hover", plateHovered);
       }
       iconTilt.lerp(hoverTilt, ease);
       iconHover = THREE.MathUtils.lerp(iconHover, Number(iconHovered), ease);
@@ -475,110 +548,103 @@ export function PressWheelCanvas({
       }
       haloUniforms.uInfluence.value = THREE.MathUtils.lerp(haloUniforms.uInfluence.value, Number(pointerActive), ease);
       haloUniforms.uTime.value = elapsed;
+      haloUniforms.uOpacity.value = 0.3 * (1 - 0.72 * focusAmount);
 
       const leftFloat = Math.sin(elapsed * 1.35) * 0.05;
       const rightFloat = Math.sin(elapsed * 1.11 + 1.5) * 0.05;
       const leftBreath = Math.sin(elapsed * 1.17 + 0.8) * (Math.PI / 120);
       const rightBreath = Math.sin(elapsed * 1.31 + 2.4) * (Math.PI / 120);
-      const titleClearance = (Math.min(152, viewW * 0.185) / viewW) * (2 * halfW);
-      const inspectionDepth = 0.4;
-      const inspectionScale = 1.12;
-      const maxPerspective = camera.position.z / (camera.position.z - inspectionDepth - 0.08);
-      const desktopPlateScale = Math.min(1, (halfW - titleClearance - 0.16) / (3.2 * inspectionScale * maxPerspective));
+      const titleClearance = Math.min(152, viewW * 0.13) * (2 * halfW / viewW);
+      const plateScale = stacked ? Math.min(0.64, halfW * 0.36) : Math.min(0.98, (halfW - titleClearance - 0.16) / PLATE_WIDTH);
       const plateCenter = -(halfW + titleClearance) * 0.5;
-      const desktopIconScale = Math.min(1, halfW * 0.38);
+      const focusDepth = 0.38;
+      const focusProjection = 1 - focusDepth / camera.position.z;
+      const focusPlateScale = (2 * halfW / PLATE_WIDTH) * (stacked ? 0.88 : 0.54) * focusProjection;
+      const focusPlateX = (stacked ? 0 : -halfW * 0.43) * focusProjection;
+      const focusPlateY = halfH * (stacked ? 0.35 : 0.03) * focusProjection;
+      const arcRadius = stacked ? halfW * 0.66 : Math.min(halfH * 0.88, halfW * 0.9);
+      const arcX = halfW * (stacked ? 0.67 : 0.62);
+      const arcY = halfH * (stacked ? 0.40 : -0.025);
+      const iconScale = stacked ? Math.min(0.61, halfW * 0.32) : Math.min(0.91, halfW * 0.37);
+      const focusIconDepth = 0.18;
+      const iconProjection = 1 - focusIconDepth / camera.position.z;
+      const focusIconX = halfW * (stacked ? 0.70 : 0.82) * iconProjection;
+      const focusIconY = halfH * (stacked ? -0.045 : 0.015) * iconProjection;
+      const focusIconScale = Math.min(iconScale, (stacked ? 0.36 : 0.29) * halfW * iconProjection / 1.31);
+      const selectedIconX = stacked ? halfW * 0.53 : Math.max(halfW * 0.43, titleClearance + iconScale * 0.73);
 
       for (let i = 0; i < N; i++) {
         const off = wrapHalfOffset(i - pos, N);
         const absOff = Math.abs(off);
         const activeWeight = 1 - THREE.MathUtils.smoothstep(absOff, 0, 1);
-
+        const inspection = i === focusIndex ? focusAmount : 0;
+        const pull = i === s.selected ? s.pull : 0;
+        const iconFocus = inspection * pull;
+        const backgroundDim = i === focusIndex ? 1 : 1 - 0.83 * focusAmount;
         const L = leftMeshes[i];
         const R = rightGroups[i];
+
+        const lAngle = off * (stacked ? 0.72 : 1.02);
+        const lSin = Math.sin(lAngle);
+        const lCos = Math.cos(lAngle);
+        const normalX = stacked
+          ? halfW * (-0.38 + lSin * 0.22)
+          : THREE.MathUtils.lerp(halfW * (-0.94 + lCos * 0.44), plateCenter, activeWeight);
+        const normalY = stacked ? halfH * (0.34 - lSin * 0.28) : halfH * (-0.04 + lSin * 0.74);
+        const normalZ = stacked ? lCos * 0.55 - 0.55 : lCos * 0.9 - 0.85;
+        const normalOpacity = stacked
+          ? Math.max(0, 1 - absOff * 0.62)
+          : Math.max(0, 1 - Math.max(0, absOff - 1.05) * 0.92);
+        const plateOpacity = THREE.MathUtils.lerp(
+          absOff < (stacked ? 1.65 : 2.25) ? normalOpacity * backgroundDim : 0, 1, inspection,
+        );
         const uniforms = L.material.uniforms;
-        const inspection = THREE.MathUtils.lerp(uniforms.uHoverMix.value, Number(plateHovered && i === selected), ease);
-        uniforms.uHoverMix.value = inspection;
-        if (stacked) {
-          const angle = off * 0.72;
-          const rad = halfH * 0.28;
-          const lx = -halfW * 0.38 + Math.sin(angle) * (halfW * 0.22);
-          const ly = halfH * 0.34 - Math.sin(angle) * rad;
-          const lz = Math.cos(angle) * 0.55 - 0.55;
-          const lVis = absOff < 1.65;
-          const lOpacity = lVis ? Math.max(0, 1 - absOff * 0.62) : 0;
-
-          L.visible = lOpacity > 0.02;
-          L.position.set(lx, ly + leftFloat * activeWeight, lz + inspection * 0.2);
-          L.rotation.set(off * 0.14 + leftBreath * activeWeight, -off * 0.18, -off * 0.24);
-          const ls = Math.min(0.64, halfW * 0.36) * (1 - Math.min(0.34, absOff * 0.16));
-          L.scale.setScalar(ls * (1 + 0.12 * inspection));
-          uniforms.uOpacity.value = lOpacity;
-
-          const rx = halfW * (0.78 - 0.23 * activeWeight) - Math.cos(angle * 1.1) * 0.06;
-          const ry = halfH * 0.4 + Math.sin(-angle * 1.1) * rad * 0.75;
-          const rOpacity = lVis ? Math.max(0, 1 - absOff * 0.68) : 0;
-          R.group.visible = rOpacity > 0.02;
-          R.group.position.set(rx, ry + rightFloat * activeWeight, lz - 0.1 + 0.36 * activeWeight);
-          R.group.rotation.set(
-            (rightBreath + iconTilt.x) * activeWeight,
-            -0.25 + (0.19 + iconTilt.y) * activeWeight,
-            -0.14 * (1 - activeWeight) - off * 0.44,
-          );
-          R.group.scale.setScalar(Math.min(0.65, halfW * 0.31) * (1 + activeWeight * 0.25));
-          R.bodyMat.opacity = rOpacity;
-          R.faceMat.opacity = rOpacity;
-        } else {
-          const lAngle = off * 1.02;
-          const lRadiusX = halfW * 0.44;
-          const lRadiusY = halfH * 0.74;
-          const lx = -halfW * 0.94 + Math.cos(lAngle) * lRadiusX;
-          const ly = -halfH * 0.04 + Math.sin(lAngle) * lRadiusY;
-          const lz = Math.cos(lAngle) * 0.9 - 0.85;
-          const lVis = absOff < 2.25;
-          const lOpacity = lVis ? Math.max(0, 1 - Math.max(0, absOff - 1.05) * 0.92) : 0;
-
-          L.visible = lOpacity > 0.02;
-          const lift = inspectionDepth * inspection;
-          const centeredX = plateCenter * (1 - lift / camera.position.z);
-          L.position.set(THREE.MathUtils.lerp(lx, centeredX, activeWeight), ly + leftFloat * activeWeight, lz + lift);
-          L.rotation.set(off * 0.1 + leftBreath * activeWeight, (0.22 - off * 0.14) * (1 - inspection * 0.8), off * 0.42);
-          const ls = desktopPlateScale * (1 - Math.min(0.34, absOff * 0.16));
-          L.scale.setScalar(ls * THREE.MathUtils.lerp(1, inspectionScale, inspection));
-          uniforms.uOpacity.value = lOpacity;
-
-          const rAngle = -off * 1.45;
-          const rRadiusX = halfW * 0.34;
-          const rRadiusY = halfH * 0.64;
-          const arcX = halfW * 0.95 - Math.cos(rAngle) * rRadiusX;
-          const selectedX = Math.max(halfW * 0.43, titleClearance + desktopIconScale * 0.76);
-          const rx = THREE.MathUtils.lerp(arcX, selectedX, activeWeight);
-          const ry = -halfH * 0.02 + Math.sin(rAngle) * rRadiusY;
-          const rz = Math.cos(rAngle) * 0.75 - 0.75 + 0.47 * activeWeight;
-          const rVis = absOff < 1.9;
-          const rOpacity = rVis ? Math.max(0, 1 - Math.max(0, absOff - 0.95) * 0.95) : 0;
-
-          R.group.visible = rOpacity > 0.02;
-          R.group.position.set(rx, ry + rightFloat * activeWeight, rz);
-          R.group.rotation.set(
-            -off * 0.08 + (rightBreath + iconTilt.x) * activeWeight,
-            -0.28 + off * 0.14 + (0.23 + iconTilt.y) * activeWeight,
-            -0.14 * (1 - activeWeight) - off * 0.56,
-          );
-          const rs = desktopIconScale * (1 + 0.25 * activeWeight - Math.min(0.26, absOff * 0.14));
-          R.group.scale.setScalar(rs);
-          R.bodyMat.opacity = rOpacity;
-          R.faceMat.opacity = rOpacity;
-        }
+        L.visible = plateOpacity > 0.02;
         if (L.visible) {
-          uniforms.uActive.value = activeWeight;
+          L.position.set(
+            THREE.MathUtils.lerp(normalX, focusPlateX, inspection),
+            THREE.MathUtils.lerp(normalY, focusPlateY, inspection) + leftFloat * activeWeight * (1 - 0.55 * inspection),
+            THREE.MathUtils.lerp(normalZ, focusDepth, inspection),
+          );
+          L.rotation.set(
+            off * 0.12 * (1 - inspection) + leftBreath * activeWeight * (1 - 0.7 * inspection),
+            THREE.MathUtils.lerp((stacked ? 0.03 : 0.22) - off * 0.16, 0.06, inspection),
+            off * (stacked ? -0.24 : 0.42) * (1 - inspection),
+          );
+          const scale = plateScale * (1 - Math.min(0.34, absOff * 0.16));
+          L.scale.setScalar(THREE.MathUtils.lerp(scale, focusPlateScale, inspection));
+          uniforms.uOpacity.value = plateOpacity;
+          uniforms.uActive.value = Math.max(activeWeight, inspection);
+          uniforms.uHover.value = THREE.MathUtils.lerp(uniforms.uHover.value, Number(plateHovered && i === selected), ease);
+          uniforms.uFocus.value = inspection;
           uniforms.uPointer.value.set(pointerActive ? px : 0.5, pointerActive ? py : 0.5);
           uniforms.uVel.value.set(vx, vy);
           uniforms.uGlitch.value = smoothGlitch;
           uniforms.uTime.value = elapsed;
         }
+
+        const rAngle = -off * (stacked ? 0.85 : 0.93);
+        const orbitX = arcX + arcRadius * (1 - Math.cos(rAngle));
+        const orbitY = arcY + arcRadius * Math.sin(rAngle);
+        const rOpacity = absOff < 1.85 ? Math.max(0, 1 - Math.max(0, absOff - 1) * 1.12) : 0;
+        const iconOpacity = THREE.MathUtils.lerp(rOpacity * backgroundDim, 1, iconFocus);
+        R.group.visible = iconOpacity > 0.02;
         if (R.group.visible) {
-          R.bodyMat.iridescence = 0.035 + 0.37 * activeWeight * iconHover;
-          R.bodyMat.clearcoatRoughness = 0.16 - 0.065 * activeWeight * iconHover;
+          R.group.position.set(
+            THREE.MathUtils.lerp(THREE.MathUtils.lerp(orbitX, selectedIconX, pull), focusIconX, iconFocus),
+            THREE.MathUtils.lerp(orbitY, focusIconY, iconFocus) + rightFloat * pull,
+            THREE.MathUtils.lerp(0.32 * pull, focusIconDepth, iconFocus),
+          );
+          R.group.rotation.set(
+            -off * 0.08 * (1 - pull) + (rightBreath + iconTilt.x) * pull,
+            THREE.MathUtils.lerp(-0.30 + off * 0.11, -0.045 + iconTilt.y, pull),
+            (-0.12 - off * 0.41) * (1 - pull),
+          );
+          R.group.scale.setScalar(THREE.MathUtils.lerp(iconScale * (1 + 0.18 * pull), focusIconScale, iconFocus));
+          R.bodyMat.opacity = iconOpacity;
+          R.faceMat.opacity = iconOpacity;
+          R.bodyMat.iridescence = 0.045 + 0.42 * pull * iconHover;
+          R.bodyMat.clearcoatRoughness = 0.105 - 0.035 * pull * iconHover;
         }
       }
 
@@ -597,6 +663,10 @@ export function PressWheelCanvas({
       ro.disconnect();
       observer.disconnect();
       themeObs.disconnect();
+      hitPlateRef.current = null;
+      if (center) center.style.transform = "";
+      if (shade) shade.style.opacity = "";
+      stage?.removeAttribute("data-plate-hover");
       if (gpuFence) (gl as WebGL2RenderingContext).deleteSync(gpuFence);
       photoGeo.dispose();
       tileBevelGeo.dispose();
@@ -607,7 +677,7 @@ export function PressWheelCanvas({
       texturesToDispose.forEach((t) => t.dispose());
       renderer.dispose();
     };
-  }, [items, simRef]);
+  }, [items, simRef, centerRef, shadeRef, hitPlateRef]);
 
   return <canvas ref={canvasRef} className="hv2__glcanvas" data-testid="home-press-canvas" aria-hidden="true" />;
 }

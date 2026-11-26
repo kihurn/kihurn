@@ -29,12 +29,22 @@ function drawProjectMotif(
   y: number,
   radius: number,
   color: string,
+  metallic = false,
 ) {
   ctx.save();
   ctx.translate(x - radius, y - radius);
   ctx.scale(radius / 50, radius / 50);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
+  if (metallic) {
+    const alloy = ctx.createLinearGradient(18, 0, 79, 100);
+    alloy.addColorStop(0, "#6e737d");
+    alloy.addColorStop(0.27, "#e8e9e8");
+    alloy.addColorStop(0.42, "#aeb4c1");
+    alloy.addColorStop(0.63, "#e4e0d8");
+    alloy.addColorStop(0.82, "#9299a8");
+    alloy.addColorStop(1, "#ced0cf");
+    ctx.strokeStyle = alloy;
+  } else ctx.strokeStyle = color;
+  ctx.lineWidth = metallic ? 3.6 : 3;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   const emblem = emblems[slug];
@@ -90,22 +100,33 @@ export function paintProjectPlateCanvas(
   }
 
   const layout = index % 4;
-  const paper = dark ? "#222221" : "#eaeae7";
-  const ink = dark ? "#efefeb" : "#1c1c1c";
-  const muted = dark ? "#aaa9a3" : "#595954";
-  const line = dark ? "#53534e" : "#bcbcb3";
-  ctx.fillStyle = paper;
+  const paper = dark ? "#17191b" : "#242628";
+  const ink = "#efefeb";
+  const muted = "#a3a7a9";
+  const line = "#4c5052";
+  const stock = ctx.createLinearGradient(0, h, w, 0);
+  stock.addColorStop(0, paper);
+  stock.addColorStop(1, ["#33383d", "#202427", "#283335", "#34383e"][layout]);
+  ctx.fillStyle = stock;
   ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = line;
 
   if (layout === 0) {
-    ctx.fillStyle = ink;
-    ctx.fillRect(363, 0, 277, h);
-    drawProjectMotif(ctx, item.slug, 501, 181, 104, paper);
+    ctx.save();
+    ctx.translate(505, 171);
+    ctx.rotate(-0.14);
+    ctx.lineWidth = 1.2;
+    for (const radius of [92, 129, 166, 203]) {
+      ctx.beginPath();
+      ctx.ellipse(25, 2, radius, radius * 0.79, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    drawProjectMotif(ctx, item.slug, 497, 171, 78, ink);
     ctx.fillStyle = muted;
     for (let i = 0; i < 14; i++) ctx.fillRect(30 + i * 7, 300, i % 3 === 0 ? 4 : 2, 13);
   } else if (layout === 1) {
-    ctx.fillStyle = dark ? "#30302d" : "#d9d9d2";
+    ctx.fillStyle = "#262a2d";
     ctx.fillRect(349, 63, 254, 222);
     ctx.strokeRect(349.5, 63.5, 253, 221);
     ctx.strokeRect(349.5, 63.5, 253, 29);
@@ -142,15 +163,13 @@ export function paintProjectPlateCanvas(
     ctx.fillRect(489, 178, 120, 110);
     drawProjectMotif(ctx, item.slug, 550, 232, 42, ink);
   } else {
-    ctx.fillStyle = dark ? "#e1e1d7" : "#292928";
     ctx.beginPath();
-    ctx.moveTo(401, 0);
-    ctx.lineTo(w, 0);
-    ctx.lineTo(w, h);
-    ctx.lineTo(313, h);
-    ctx.closePath();
-    ctx.fill();
-    drawProjectMotif(ctx, item.slug, 507, 177, 91, paper);
+    for (let i = -1; i < 7; i++) {
+      ctx.moveTo(433 + i * 40, 0);
+      ctx.lineTo(303 + i * 40, h);
+    }
+    ctx.stroke();
+    drawProjectMotif(ctx, item.slug, 507, 177, 91, ink);
     ctx.fillStyle = muted;
     ctx.fillRect(25, 273, 192, 1);
     ctx.fillRect(25, 284, 141, 1);
@@ -164,10 +183,6 @@ export function paintProjectPlateCanvas(
   ctx.fillStyle = ink;
   ctx.font = layout === 0 ? '600 52px Georgia, serif' : "600 43px system-ui, sans-serif";
   drawPlateTitle(ctx, item.name, 26, layout === 0 ? 144 : 137, layout === 0 ? 310 : 294, layout === 0 ? 49 : 44);
-
-  ctx.strokeStyle = line;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(12.5, 12.5, w - 25, h - 25);
 }
 
 export function paintIconEmblemCanvas(canvas: HTMLCanvasElement, item: WheelItem) {
@@ -181,7 +196,7 @@ export function paintIconEmblemCanvas(canvas: HTMLCanvasElement, item: WheelItem
   background.addColorStop(1, "#151515");
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, w, h);
-  drawProjectMotif(ctx, item.slug, w / 2, h / 2, w * 0.325, "#efefeb");
+  drawProjectMotif(ctx, item.slug, w / 2, h / 2, w * 0.325, "#efefeb", true);
 }
 
 function roundedTileShape(size: number, radius: number) {
