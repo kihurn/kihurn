@@ -2,6 +2,30 @@ import { expect, test, type Page } from "@playwright/test";
 
 const hydrated = (page: Page) => page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
 
+test("the signature area opens the pad and allows editing the saved mark", async ({ page }) => {
+  await page.goto("/contact?autostart=1");
+  await hydrated(page);
+  const signature = page.getByRole("button", { name: "Sign here" });
+  await expect(signature).toHaveText("[sign here]");
+  await signature.click();
+  const dialog = page.getByRole("dialog", { name: "Sign your note" });
+  await expect(dialog).toBeVisible();
+  const canvas = dialog.getByLabel("Signature drawing pad");
+  await canvas.click({ position: { x: 40, y: 45 } });
+  await dialog.getByRole("button", { name: "Done" }).click();
+  const edit = page.getByRole("button", { name: "Edit signature" });
+  await expect(edit.getByRole("img", { name: "Your captured signature" })).toBeVisible();
+  await edit.click();
+  await dialog.getByRole("button", { name: "Clear", exact: true }).click();
+  await dialog.getByRole("button", { name: "Close signature dialog" }).click();
+  await expect(edit).toBeFocused();
+  await edit.click();
+  await expect(dialog.getByRole("button", { name: "Clear", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Clear", exact: true }).click();
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(signature).toBeVisible();
+});
+
 test("typing a name updates the stub", async ({ page }) => {
   await page.goto("/contact");
   await hydrated(page);

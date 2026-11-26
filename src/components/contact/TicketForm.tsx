@@ -89,100 +89,114 @@ export function TicketForm({ email }: { email: string }) {
       >
         <div className="letter-sheet__meta text-mono-meta">
           <span>DATE::{date || "MYT"}</span>
+          <span className="postcard__title">Postcard</span>
           <span>DESK::KIHURN</span>
         </div>
 
-        <fieldset className="ticket__types" disabled={sent}>
-          <legend className="text-label">RE :: What is this about?</legend>
-          <div className="ticket__pills">
-            {TICKET_TYPES.map((t) => (
-              <label key={t.id} className="ticket__radio text-body">
-                <input type="radio" name="type" value={t.id} checked={type === t.id} onChange={() => setType(t.id)} />
-                <span><span className="ticket__check" aria-hidden="true">{type === t.id ? "[x]" : "[ ]"}</span> {t.label}</span>
+        <div className="postcard__body">
+          <div className="postcard__address">
+            <span className="postcard__stamp text-mono-meta" aria-hidden="true">KH</span>
+            <fieldset className="ticket__types" disabled={sent}>
+              <legend className="text-label">RE :: What is this about?</legend>
+              <div className="ticket__pills">
+                {TICKET_TYPES.map((t) => (
+                  <label key={t.id} className="ticket__radio text-body">
+                    <input type="radio" name="type" value={t.id} checked={type === t.id} onChange={() => setType(t.id)} />
+                    <span><span className="ticket__check" aria-hidden="true">{type === t.id ? "[x]" : "[ ]"}</span> {t.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="letter-sheet__row">
+              <label className="ticket__field">
+                <span className="text-label">FROM :: Your name</span>
+                <input
+                  ref={nameRef}
+                  name="name"
+                  placeholder="FROM :: Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={80}
+                  autoComplete="name"
+                  disabled={sent}
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? "err-name" : undefined}
+                />
+                {errors.name ? (
+                  <span id="err-name" className="ticket__err" role="alert">
+                    {errors.name}
+                  </span>
+                ) : null}
               </label>
-            ))}
+
+              <label className="ticket__field">
+                <span className="text-label">Your email</span>
+                <input
+                  ref={emailRef}
+                  name="email"
+                  type="email"
+                  placeholder="you@domain.com"
+                  value={mail}
+                  onChange={(e) => setMail(e.target.value)}
+                  autoComplete="email"
+                  disabled={sent}
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? "err-email" : undefined}
+                />
+                {errors.email ? (
+                  <span id="err-email" className="ticket__err" role="alert">
+                    {errors.email}
+                  </span>
+                ) : null}
+              </label>
+            </div>
+
+            <label className="ticket__field">
+              <span className="text-label">VIA :: Referral (optional)</span>
+              <input
+                ref={referralRef}
+                name="referral"
+                value={referral}
+                maxLength={160}
+                disabled={sent}
+                onChange={(event) => setReferral(event.target.value)}
+                aria-invalid={Boolean(errors.referral)}
+                aria-describedby={errors.referral ? "err-referral" : undefined}
+              />
+              {errors.referral ? <span id="err-referral" className="ticket__err" role="alert">{errors.referral}</span> : null}
+            </label>
           </div>
-        </fieldset>
 
-        <div className="letter-sheet__row">
-          <label className="ticket__field">
-            <span className="text-label">FROM :: Your name</span>
-            <input
-              ref={nameRef}
-              name="name"
-              placeholder="FROM :: Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={80}
-              autoComplete="name"
-              disabled={sent}
-              aria-invalid={!!errors.name}
-              aria-describedby={errors.name ? "err-name" : undefined}
-            />
-            {errors.name ? (
-              <span id="err-name" className="ticket__err" role="alert">
-                {errors.name}
-              </span>
-            ) : null}
-          </label>
+          <div className="postcard__message">
+            <label className="ticket__field">
+              <span className="text-label">What are we making?</span>
+              <textarea
+                ref={messageRef}
+                name="message"
+                aria-label="Message"
+                rows={5}
+                placeholder="Write a note, timeline, or link…"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={2000}
+                disabled={sent}
+                aria-invalid={!!errors.message}
+                aria-describedby={errors.message ? "err-message" : undefined}
+              />
+              {errors.message ? (
+                <span id="err-message" className="ticket__err" role="alert">
+                  {errors.message}
+                </span>
+              ) : null}
+            </label>
 
-          <label className="ticket__field">
-            <span className="text-label">Your email</span>
-            <input
-              ref={emailRef}
-              name="email"
-              type="email"
-              placeholder="you@domain.com"
-              value={mail}
-              onChange={(e) => setMail(e.target.value)}
-              autoComplete="email"
-              disabled={sent}
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? "err-email" : undefined}
-            />
-            {errors.email ? (
-              <span id="err-email" className="ticket__err" role="alert">
-                {errors.email}
-              </span>
-            ) : null}
-          </label>
-        </div>
-
-        <label className="ticket__field">
-          <span className="text-label">VIA :: Referral (optional)</span>
-          <input ref={referralRef} name="referral" value={referral} maxLength={160} disabled={sent}
-            onChange={(event) => setReferral(event.target.value)} aria-invalid={Boolean(errors.referral)}
-            aria-describedby={errors.referral ? "err-referral" : undefined}
-          />
-          {errors.referral ? <span id="err-referral" className="ticket__err" role="alert">{errors.referral}</span> : null}
-        </label>
-
-        <label className="ticket__field">
-          <span className="text-label">What are we making?</span>
-          <textarea
-            ref={messageRef}
-            name="message"
-            aria-label="Message"
-            rows={6}
-            placeholder="Write a note, timeline, or link…"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            maxLength={2000}
-            disabled={sent}
-            aria-invalid={!!errors.message}
-            aria-describedby={errors.message ? "err-message" : undefined}
-          />
-          {errors.message ? (
-            <span id="err-message" className="ticket__err" role="alert">
-              {errors.message}
-            </span>
-          ) : null}
-        </label>
-
-        <div className="letter-sheet__signoff">
-          <p>Sincerely,</p>
-          <SignaturePad value={signature} onChange={setSignature} disabled={sent} />
-          <p>{name.trim() || "Your name"}</p>
+            <div className="letter-sheet__signoff">
+              <p>Sincerely,</p>
+              <SignaturePad value={signature} onChange={setSignature} disabled={sent} />
+              <p>{name.trim() || "Your name"}</p>
+            </div>
+          </div>
         </div>
 
         <input className="ticket__hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" defaultValue="" />

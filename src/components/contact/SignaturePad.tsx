@@ -22,7 +22,7 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
   const [hasInk, setHasInk] = useState(Boolean(value));
   const [inkPath, setInkPath] = useState("");
 
-  const setupCanvas = useCallback(() => {
+  const setupCanvas = useCallback((restore = false) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -30,24 +30,26 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.max(240, Math.round(rect.width * dpr));
     const h = Math.max(120, Math.round(rect.height * dpr));
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.scale(dpr, dpr);
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.lineWidth = 2.2;
-        ctx.strokeStyle = "#1e1e1e";
-        if (value) {
-          const img = new Image();
-          img.onload = () => {
-            ctx.drawImage(img, 0, 0, rect.width, rect.height);
-          };
-          img.src = value;
-        }
-      }
+    if (!restore && canvas.width === w && canvas.height === h) return;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(w / rect.width, 0, 0, h / rect.height, 0, 0);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = "#1e1e1e";
+    if (pathRef.current) {
+      const path = new Path2D();
+      path.addPath(new Path2D(pathRef.current), new DOMMatrix().scale(rect.width / 1000, rect.height / 400));
+      ctx.stroke(path);
+    } else if (value && hasInkRef.current) {
+      const img = new Image();
+      img.onload = () => {
+        if (dialogRef.current?.open && hasInkRef.current) ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      };
+      img.src = value;
     }
   }, [value]);
 
@@ -56,7 +58,7 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     if (!dlg) return;
     if (open) {
       if (!dlg.open) dlg.showModal();
-      const raf = requestAnimationFrame(() => setupCanvas());
+      const raf = requestAnimationFrame(() => setupCanvas(true));
       return () => cancelAnimationFrame(raf);
     }
     if (dlg.open) dlg.close();
@@ -130,9 +132,17 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
     }
     hasInkRef.current = false;
     pathRef.current = "";
-    setInkPath("");
     setHasInk(false);
-    onChange("");
+  };
+
+  const openPad = () => {
+    pathRef.current = inkPath;
+    hasInkRef.current = Boolean(value);
+    drawingRef.current = false;
+    pointerRef.current = null;
+    lastPtRef.current = null;
+    setHasInk(Boolean(value));
+    setOpen(true);
   };
 
   const commitAndClose = () => {
@@ -144,6 +154,7 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
       } catch {}
     } else {
       onChange("");
+      setInkPath("");
     }
     setOpen(false);
   };
@@ -156,9 +167,17 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
         </span>
       </div>
 
-      <div className="sigline__row">
+      <button
+        type="button"
+        className="sigline__trigger text-mono-meta"
+        onClick={openPad}
+        disabled={disabled}
+        aria-label={value ? "Edit signature" : "Sign here"}
+        aria-haspopup="dialog"
+        data-sig-open
+      >
         {value ? (
-          <div className="sigline__preview">
+          <span className="sigline__preview">
             {inkPath ? (
               <svg className="sigline__img" viewBox="0 0 1000 400" role="img" aria-label="Your captured signature">
                 <path d={inkPath} fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
@@ -166,42 +185,11 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
             ) : (
               <NextImage unoptimized src={value} width={320} height={128} alt="Your captured signature" className="sigline__img" />
             )}
-          </div>
+          </span>
         ) : (
-          <button
-            type="button"
-            className="sigline__trigger text-mono-meta"
-            onClick={() => setOpen(true)}
-            disabled={disabled}
-            aria-haspopup="dialog"
-            data-sig-open
-          >
-            <span>SIGN HERE</span>
-            <span className="sigline__rule" aria-hidden="true" />
-          </button>
+          <span className="sigline__placeholder">[sign here]</span>
         )}
-
-        {value ? (
-          <div className="sigline__btns">
-            <button
-              type="button"
-              className="sigline__btn text-mono-sm"
-              onClick={() => setOpen(true)}
-              disabled={disabled}
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              className="sigline__btn text-mono-sm"
-              onClick={clearCanvas}
-              disabled={disabled}
-            >
-              Clear
-            </button>
-          </div>
-        ) : null}
-      </div>
+      </button>
 
       <dialog
         ref={dialogRef}

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <main id="main" className="page">
+    <main id="main" className="page contact-page">
       <header className="page__head">
         <p className="text-mono-meta u-muted">INTAKE::COUNTER 01 · BOOKING::OPEN</p>
         <h1 className="text-display">Contact</h1>
