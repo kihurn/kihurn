@@ -18,6 +18,20 @@ export interface WheelItem {
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
+const PROJECT_LINK_LABEL = "View project";
+
+function ScrambledLabel({ label, displayText, roll = false }: {
+  label: string;
+  displayText: string;
+  roll?: boolean;
+}) {
+  return (
+    <span className={roll ? "btn__label roll hv2__scramble-label" : "hv2__scramble-label"}>
+      <span className="hv2__scramble-original">{label}</span>
+      <span className="hv2__scramble-value" aria-hidden="true">{displayText}</span>
+    </span>
+  );
+}
 
 function subscribeReduced(cb: () => void) {
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -344,24 +358,32 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   }, [showList, N, items, canRefresh, changeFocus, beginOrbit]);
 
   const p = items[active];
-  const { displayText: scrambledIndex } = useScrambleText(`N°${pad2(active + 1)} / ${pad2(N)}`, {
+  const idle = { refreshKey, canRefresh };
+  const indexLabel = `N°${pad2(active + 1)} / ${pad2(N)}`;
+  const { displayText: scrambledIndex } = useScrambleText(indexLabel, {
     durationMs: 320,
     intervalMs: 28,
+    ...idle,
   });
   const { displayText: scrambledTitle } = useScrambleText(p.name, {
     durationMs: 350,
     intervalMs: 32,
     glyphs: "aeimnorstuwACENORSTU023",
-    refreshKey,
-    canRefresh,
+    ...idle,
   });
   const titleWords = scrambledTitle.split(" ");
   const meta = [p.role, p.year].filter(Boolean).join(" — ") || p.detail;
   const { displayText: scrambledMeta } = useScrambleText(meta, {
     durationMs: 350,
     intervalMs: 30,
-    refreshKey,
-    canRefresh,
+    ...idle,
+  });
+  const labelMotion = { durationMs: 350, intervalMs: 30, ...idle };
+  const { displayText: scrambledTag } = useScrambleText(p.tag, labelMotion);
+  const { displayText: scrambledLens } = useScrambleText(p.lens, labelMotion);
+  const { displayText: scrambledLink } = useScrambleText(PROJECT_LINK_LABEL, {
+    ...labelMotion,
+    glyphs: "aeimnorstuwACENORSTU023",
   });
 
   const stepTo = (idx: number) => {
@@ -391,7 +413,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
 
           <div ref={center} className="hv2__center" data-wheels-center>
             <p className="hv2__eyebrow text-label u-mono" aria-label={`Project ${active + 1} of ${N}`}>
-              {scrambledIndex}
+              <ScrambledLabel label={indexLabel} displayText={scrambledIndex} />
             </p>
             <p className="hv2__title">
               <span className="u-sr-only">{p.name}</span>
@@ -408,8 +430,8 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
               </span>
             </p>
             <div className="hv2__chips">
-              <span className="chip text-meta">{p.tag}</span>
-              <span className="chip text-meta chip--pill">{p.lens}</span>
+              <span className="chip text-meta"><ScrambledLabel label={p.tag} displayText={scrambledTag} /></span>
+              <span className="chip text-meta chip--pill"><ScrambledLabel label={p.lens} displayText={scrambledLens} /></span>
             </div>
             <p className="hv2__meta text-mono-sm u-muted">
               <span className="u-sr-only">{meta}</span>
@@ -417,9 +439,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
             </p>
             <div className="hv2__ctarow">
               <a href={p.href} className="btn btn--solid text-tag">
-                <span className="btn__label roll" data-roll>
-                  View project
-                </span>
+                <ScrambledLabel label={PROJECT_LINK_LABEL} displayText={scrambledLink} roll />
               </a>
             </div>
             {hint && <p className="mobile-wheel-hint text-mono-meta">↔ Swipe to browse projects</p>}

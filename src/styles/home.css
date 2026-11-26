@@ -73,6 +73,10 @@
 .hv2__title-word{display:inline-block;position:relative;max-inline-size:100%;vertical-align:top}
 .hv2__title-word>span:first-child{visibility:hidden}
 .hv2__title-word>span+span{position:absolute;inset:0;overflow:clip}
+.hv2__scramble-label{position:relative;display:inline-block;white-space:nowrap}
+.hv2__scramble-original{opacity:0}
+.hv2__scramble-value{position:absolute;inset:0}
+.hv2__scramble-label:not(.roll) .hv2__scramble-value{overflow:clip}
 .hv2__chips{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s-8)}
 .hv2__ch{margin-block:-.18em;padding-block:.18em}
 .hv2__meta{margin:var(--s-2) 0 0;text-transform:uppercase;letter-spacing:.06em;overflow-wrap:anywhere}
