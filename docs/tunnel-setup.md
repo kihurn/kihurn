@@ -21,6 +21,7 @@ Windows, PowerShell. Never paste keys in chat; they go into the Vercel dashboard
    - `C0RE_MODEL`
    - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (shared rate limits; without them limits are per instance)
    - `RESEND_API_KEY` (contact form)
+   - `RESEND_FROM_EMAIL` (optional sender override, defaults to `contact@mail.kihurn.me`)
 5. **Redeploy**, then test the preview:
    ```powershell
    curl https://<preview-url>/api/chat/health
