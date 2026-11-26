@@ -32,9 +32,9 @@ function wheelItems(ps: Project[]): WheelItem[] {
     lens: LENS_LABEL[p.lenses[0]] ?? "",
     role: p.teamPart ? "TEAM PROJECT" : undefined,
     year: p.finishedOn?.slice(0, 4),
+    detail: p.stack.slice(0, 2).join(" / ") || "Concept study",
     href: projectHref(p),
     photo: p.status === "internal" ? undefined : availableMedia(media.projects[p.slug]),
-    plate: availableMedia(`/placeholder/plate-${p.slug}.svg`),
   }));
 }
 

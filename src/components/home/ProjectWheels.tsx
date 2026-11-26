@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useScrambleText } from "@/hooks/useScrambleText";
 import { wrapIndex, wheelStepDirection } from "@/lib/wheelMath";
 import { PressWheelCanvas, type WheelSimState } from "./PressWheelCanvas";
@@ -12,14 +12,13 @@ export interface WheelItem {
   lens: string;
   role?: string;
   year?: string;
+  detail: string;
   href: string;
   photo?: string;
-  plate?: string;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-const emptySub = () => () => {};
 function subscribeReduced(cb: () => void) {
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
   mq.addEventListener("change", cb);
@@ -48,10 +47,12 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   const [active, setActive] = useState(0);
   const [viewMode, setViewMode] = useState<"wheel" | "list">("wheel");
   const reduced = useSyncExternalStore(subscribeReduced, getReducedSnapshot, () => false);
-  void emptySub;
 
   const stage = useRef<HTMLElement>(null);
   const activeRef = useRef(0);
+  const lastInput = useRef(0);
+  const onScreen = useRef(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const glSimRef = useRef<WheelSimState>({
     pos: 0,
     vel: 0,
@@ -59,6 +60,8 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     pointerY: 0.5,
     pointerVelX: 0,
     pointerVelY: 0,
+    pointerActive: false,
+    dragging: false,
     stacked: false,
   });
 
@@ -80,12 +83,20 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   const [hint, setHint] = useState(true);
 
   const showList = reduced || viewMode === "list";
+  const canRefresh = useCallback(() => {
+    const s = sim.current;
+    return onScreen.current && !document.hidden && !s.dragging
+      && Math.abs(s.target - s.pos) < 0.01 && performance.now() - lastInput.current > 220;
+  }, []);
 
   useEffect(() => {
     if (showList) return;
     const el = stage.current;
     if (!el) return;
     const s = sim.current;
+    const glSim = glSimRef.current;
+    const noteInput = () => { lastInput.current = performance.now(); };
+    noteInput();
     let raf = 0;
     let W = 0;
     let H = 0;
@@ -97,7 +108,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       H = r.height;
       stacked = W < 768;
       el.classList.toggle("is-stacked", stacked);
-      glSimRef.current.stacked = stacked;
+      glSim.stacked = stacked;
     };
 
     const frame = () => {
@@ -111,16 +122,17 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
         if (Math.abs(s.vel) < 0.0004) s.target = Math.round(s.target);
       }
 
-      glSimRef.current.pos = s.pos;
-      glSimRef.current.vel = s.vel;
-      glSimRef.current.pointerX = s.px;
-      glSimRef.current.pointerY = s.py;
-      glSimRef.current.pointerVelX = s.pvx;
-      glSimRef.current.pointerVelY = s.pvy;
+      glSim.pos = s.pos;
+      glSim.vel = s.vel;
+      glSim.pointerX = s.px;
+      glSim.pointerY = s.py;
+      glSim.pointerVelX = s.pvx;
+      glSim.pointerVelY = s.pvy;
 
       const nearest = wrapIndex(Math.round(s.pos), N);
       if (nearest !== activeRef.current) {
         activeRef.current = nearest;
+        noteInput();
         setActive(nearest);
       }
       raf = requestAnimationFrame(frame);
@@ -130,6 +142,19 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     raf = requestAnimationFrame(frame);
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    const observer = new IntersectionObserver(([entry]) => {
+      onScreen.current = entry.intersectionRatio >= 0.55;
+      noteInput();
+    }, { threshold: 0.55 });
+    observer.observe(el);
+    let lastRefresh = 0;
+    const idleTimer = window.setInterval(() => {
+      const now = performance.now();
+      if (canRefresh() && now - Math.max(lastRefresh, lastInput.current) >= 6000) {
+        lastRefresh = now;
+        setRefreshKey((key) => key + 1);
+      }
+    }, 240);
 
     const rowPx = () => Math.max(120, H * 0.28);
     let snapTimer = 0;
@@ -139,6 +164,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     const hide = () => setHint(false);
 
     const onWheel = (e: WheelEvent) => {
+      noteInput();
       const sideways = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
       if (!sideways) return;
       e.preventDefault();
@@ -149,8 +175,10 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     };
 
     const onDown = (e: PointerEvent) => {
+      noteInput();
       if ((e.target as HTMLElement).closest("a, button")) return;
       s.dragging = true;
+      glSim.dragging = true;
       s.moved = 0;
       s.lastY = e.clientY;
       s.lastX = e.clientX;
@@ -166,6 +194,8 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     };
 
     const onMove = (e: PointerEvent) => {
+      noteInput();
+      glSim.pointerActive = e.pointerType !== "touch" && !(e.target as HTMLElement).closest("a, button");
       const r = el.getBoundingClientRect();
       const nx = (e.clientX - r.left) / Math.max(1, r.width);
       const ny = 1 - (e.clientY - r.top) / Math.max(1, r.height);
@@ -190,6 +220,8 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     const onUp = (e: PointerEvent) => {
       if (!s.dragging) return;
       s.dragging = false;
+      glSim.dragging = false;
+      noteInput();
       el.classList.remove("is-grabbing");
       if (!s.touch) {
         try {
@@ -207,10 +239,12 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
+        noteInput();
         s.target = Math.round(s.target) + 1;
         hide();
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
+        noteInput();
         s.target = Math.round(s.target) - 1;
         hide();
       } else if (e.key === "Enter" && document.activeElement === el) {
@@ -218,24 +252,41 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
       }
     };
 
+    const onLeave = () => {
+      glSim.pointerActive = false;
+      noteInput();
+    };
+
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerleave", onLeave);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
     window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onLeave, { passive: true });
+    document.addEventListener("visibilitychange", onLeave);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(snapTimer);
+      window.clearInterval(idleTimer);
       ro.disconnect();
+      observer.disconnect();
+      onScreen.current = false;
+      glSim.pointerActive = false;
+      glSim.dragging = false;
+      s.dragging = false;
       el.removeEventListener("wheel", onWheel);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerleave", onLeave);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onLeave);
+      document.removeEventListener("visibilitychange", onLeave);
     };
-  }, [showList, N, items]);
+  }, [showList, N, items, canRefresh]);
 
   const p = items[active];
   const { displayText: scrambledIndex } = useScrambleText(`N°${pad2(active + 1)} / ${pad2(N)}`, {
@@ -243,16 +294,23 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     intervalMs: 28,
   });
   const { displayText: scrambledTitle } = useScrambleText(p.name, {
-    durationMs: 440,
+    durationMs: 350,
     intervalMs: 32,
+    glyphs: "aeimnorstuwACENORSTU023",
+    refreshKey,
+    canRefresh,
   });
-  const meta = [p.role, p.year].filter(Boolean).join(" — ");
+  const titleWords = scrambledTitle.split(" ");
+  const meta = [p.role, p.year].filter(Boolean).join(" — ") || p.detail;
   const { displayText: scrambledMeta } = useScrambleText(meta, {
-    durationMs: 360,
+    durationMs: 350,
     intervalMs: 30,
+    refreshKey,
+    canRefresh,
   });
 
   const stepTo = (idx: number) => {
+    lastInput.current = performance.now();
     const s = sim.current;
     s.target = wheelStepDirection(s.pos, idx, N);
     setHint(false);
@@ -279,12 +337,28 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
             <p className="hv2__eyebrow text-label u-mono" aria-label={`Project ${active + 1} of ${N}`}>
               {scrambledIndex}
             </p>
-            <p className="hv2__title">{scrambledTitle}</p>
+            <p className="hv2__title">
+              <span className="u-sr-only">{p.name}</span>
+              <span aria-hidden="true">
+                {p.name.split(" ").map((word, index) => (
+                  <Fragment key={`${word}-${index}`}>
+                    {index > 0 ? " " : null}
+                    <span className="hv2__title-word">
+                      <span>{word}</span>
+                      <span>{titleWords[index]}</span>
+                    </span>
+                  </Fragment>
+                ))}
+              </span>
+            </p>
             <div className="hv2__chips">
               <span className="chip text-meta">{p.tag}</span>
               <span className="chip text-meta chip--pill">{p.lens}</span>
             </div>
-            {meta ? <p className="hv2__meta text-mono-sm u-muted">{scrambledMeta}</p> : null}
+            <p className="hv2__meta text-mono-sm u-muted">
+              <span className="u-sr-only">{meta}</span>
+              <span aria-hidden="true">{scrambledMeta}</span>
+            </p>
             <div className="hv2__ctarow">
               <a href={p.href} className="btn btn--solid text-tag">
                 <span className="btn__label roll" data-roll>

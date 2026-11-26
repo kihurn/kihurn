@@ -65,7 +65,10 @@
 .hv2__center{display:flex;flex-direction:column;align-items:center;gap:var(--s-10)}
 .hv2__stage.is-stacked .hv2__center{top:70%}
 .hv2__eyebrow{margin:0}
-.hv2__title{line-height:1.15;padding-block:.06em;margin:0}
+.hv2__stage .hv2__title{max-inline-size:min(280px,100%);white-space:normal;overflow-wrap:anywhere;text-wrap:balance;line-height:1.15;padding-block:.06em;margin:0}
+.hv2__title-word{display:inline-block;position:relative;max-inline-size:100%;vertical-align:top}
+.hv2__title-word>span:first-child{visibility:hidden}
+.hv2__title-word>span+span{position:absolute;inset:0;overflow:clip}
 .hv2__chips{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s-8)}
 .hv2__ch{margin-block:-.18em;padding-block:.18em}
 .hv2__meta{margin:var(--s-2) 0 0;text-transform:uppercase;letter-spacing:.06em}

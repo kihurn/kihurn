@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import {
   createBeveledTileGeometry,
+  createTileFaceGeometry,
   paintIconEmblemCanvas,
   paintProjectPlateCanvas,
 } from "@/lib/pressWheelTextures";
@@ -18,6 +19,8 @@ export interface WheelSimState {
   pointerY: number;
   pointerVelX: number;
   pointerVelY: number;
+  pointerActive: boolean;
+  dragging: boolean;
   stacked: boolean;
 }
 
@@ -33,7 +36,6 @@ function detectSoftwareGl(gl: WebGLRenderingContext | WebGL2RenderingContext): b
 
 interface PlateTextureHandle {
   map: THREE.CanvasTexture;
-  depth: THREE.CanvasTexture;
   repaint: (dark: boolean) => void;
 }
 
@@ -65,6 +67,10 @@ function buildPlateTexture(item: WheelItem, index: number, dark: boolean): Plate
     map.needsUpdate = true;
   };
 
+  return { map, repaint };
+}
+
+function createPlateDepth(): THREE.CanvasTexture {
   const dCanvas = document.createElement("canvas");
   dCanvas.width = 128;
   dCanvas.height = 128;
@@ -75,43 +81,89 @@ function buildPlateTexture(item: WheelItem, index: number, dark: boolean): Plate
   grad.addColorStop(1, "#1c1c1c");
   dCtx.fillStyle = grad;
   dCtx.fillRect(0, 0, 128, 128);
-  const depth = new THREE.CanvasTexture(dCanvas);
-  depth.needsUpdate = true;
-
-  return { map, depth, repaint };
+  return new THREE.CanvasTexture(dCanvas);
 }
 
-function buildEmblemTexture(item: WheelItem, index: number): THREE.CanvasTexture {
+function buildEmblemTexture(item: WheelItem): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = 320;
   canvas.height = 320;
-  paintIconEmblemCanvas(canvas, item, index);
+  paintIconEmblemCanvas(canvas, item);
 
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
-  map.needsUpdate = true;
-
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    paintIconEmblemCanvas(canvas, item, index, img);
-    map.needsUpdate = true;
-  };
-  if (item.plate) img.src = item.plate;
-
   return map;
+}
+
+function createHalo() {
+  const count = 1560;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const radius = Math.sqrt((i + 0.5) / count);
+    const angle = i * 2.39996323 + Math.sin(i * 92.41) * 0.07;
+    positions[i * 3] = Math.cos(angle) * radius;
+    positions[i * 3 + 1] = Math.sin(angle) * radius;
+    positions[i * 3 + 2] = 0.5 + Math.sin(i * 7.853) * 0.48;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    uniforms: {
+      uTime: { value: 0 },
+      uPointer: { value: new THREE.Vector2() },
+      uInfluence: { value: 0 },
+      uPixelRatio: { value: 1 },
+      uInk: { value: new THREE.Color() },
+    },
+    vertexShader: `
+      uniform float uTime;
+      uniform vec2 uPointer;
+      uniform float uInfluence;
+      uniform float uPixelRatio;
+      varying float vAlpha;
+      void main() {
+        float radius = length(position.xy);
+        float turn = uTime * 0.052 + (1.0 - radius) * 0.11 * sin(uTime * 0.43 + radius * 4.0);
+        vec2 point = mat2(cos(turn), sin(turn), -sin(turn), cos(turn)) * position.xy;
+        vec2 delta = point - uPointer;
+        float d = length(delta);
+        float ripple = (1.0 - smoothstep(0.0, 0.48, d)) * uInfluence;
+        point += delta * ripple * (0.27 - d);
+        vAlpha = (0.25 + 0.75 * position.z) * smoothstep(0.14, 0.7, radius)
+          * (1.0 - smoothstep(0.69, 1.0, radius)) * (0.18 + 0.10 * ripple);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(point, 0.0, 1.0);
+        gl_PointSize = (1.5 + position.z * 1.0) * uPixelRatio;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uInk;
+      varying float vAlpha;
+      void main() {
+        float edge = 1.0 - smoothstep(0.29, 0.5, length(gl_PointCoord - 0.5));
+        gl_FragColor = vec4(uInk, vAlpha * edge);
+        #include <colorspace_fragment>
+      }
+    `,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.renderOrder = -1;
+  points.frustumCulled = false;
+  return points;
 }
 
 const PLATE_VERTEX_SHADER = `
   varying vec2 vUv;
   uniform vec2 uVel;
-  uniform float uBend;
+  uniform float uHoverMix;
 
   void main() {
     vUv = uv;
     vec3 pos = position;
-    float arc = sin(uv.x * 3.14159265);
-    pos.z += arc * uBend + (uv.y - 0.5) * uVel.y * 0.18 + (uv.x - 0.5) * uVel.x * 0.14;
+    pos.z *= 1.0 - 0.73 * uHoverMix;
+    pos.z += (uv.y - 0.5) * uVel.y * 0.18 + (uv.x - 0.5) * uVel.x * 0.14;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
 `;
@@ -126,28 +178,29 @@ const PLATE_FRAGMENT_SHADER = `
   uniform float uActive;
   uniform float uGlitch;
   uniform float uTime;
+  uniform float uHoverMix;
 
   void main() {
     float depth = texture2D(uDepth, vUv).r;
-    vec2 parallax = (uPointer - 0.5) * (depth - 0.5) * (0.045 * uActive) + uVel * depth * 0.025;
+    float surface = 1.0 - 0.94 * uHoverMix;
+    vec2 parallax = (uPointer - 0.5) * (depth - 0.5) * (0.018 * uActive * surface) + uVel * depth * 0.018;
 
     float scan = sin(vUv.y * 140.0 + uTime * 22.0);
-    float scanJitter = step(0.84, abs(scan)) * scan * uGlitch * 0.012;
+    float scanJitter = step(0.84, abs(scan)) * scan * uGlitch * surface * 0.003;
     vec2 baseUv = clamp(vUv + parallax + vec2(scanJitter, 0.0), 0.004, 0.996);
 
-    float chroma = uGlitch * 0.014;
+    float chroma = uGlitch * surface * 0.0025;
     float r = texture2D(uMap, clamp(baseUv + vec2(chroma, 0.0), 0.002, 0.998)).r;
     float g = texture2D(uMap, baseUv).g;
     float b = texture2D(uMap, clamp(baseUv - vec2(chroma, 0.0), 0.002, 0.998)).b;
     float a = texture2D(uMap, baseUv).a;
 
-    float vignette = smoothstep(0.0, 0.06, vUv.x) * smoothstep(1.0, 0.94, vUv.x)
-                   * smoothstep(0.0, 0.06, vUv.y) * smoothstep(1.0, 0.94, vUv.y);
-    float dim = mix(0.68, 1.0, uActive);
-
-    float lineMask = 1.0 - (step(0.5, fract(vUv.y * 90.0)) * 0.08 * uGlitch);
-
-    gl_FragColor = vec4(vec3(r, g, b) * dim * lineMask, a * uOpacity * mix(0.9, 1.0, vignette));
+    vec2 edge = smoothstep(0.0, 0.06, min(vUv, 1.0 - vUv));
+    float dim = mix(0.71, 1.0, uActive);
+    float grain = fract(sin(dot(floor(vUv * vec2(640.0, 360.0)), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+    float finish = 1.0 + (grain * 0.075 - step(0.5, fract(vUv.y * 90.0)) * (0.032 + 0.043 * uGlitch)) * surface;
+    gl_FragColor = vec4(vec3(r, g, b) * dim * finish, a * uOpacity * mix(0.92, 1.0, edge.x * edge.y));
+    #include <colorspace_fragment>
   }
 `;
 
@@ -183,9 +236,15 @@ export function PressWheelCanvas({
     camera.position.z = 7.4;
 
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environment = envTex;
+    const room = new RoomEnvironment();
+    const environment = pmrem.fromScene(room, 0.04);
+    scene.environment = environment.texture;
+    room.dispose();
     pmrem.dispose();
+
+    const halo = createHalo();
+    halo.material.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+    scene.add(halo);
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
     keyLight.position.set(4.5, 5.2, 6.0);
@@ -195,9 +254,16 @@ export function PressWheelCanvas({
     rimLight.position.set(-5.0, -2.5, 4.5);
     scene.add(rimLight);
 
-    const photoGeo = new THREE.PlaneGeometry(3.2, 1.8, software ? 10 : 18, software ? 6 : 12);
-    const tileBevelGeo = createBeveledTileGeometry(1.22, 0.22, 0.12, software ? 2 : 3, software ? 5 : 8);
-    const tileFaceGeo = new THREE.PlaneGeometry(1.06, 1.06);
+    const photoGeo = new THREE.PlaneGeometry(3.2, 1.8, 24, 8);
+    const photoVertices = photoGeo.getAttribute("position");
+    const cylinderRadius = 5.8;
+    for (let i = 0; i < photoVertices.count; i++) {
+      const x = photoVertices.getX(i);
+      photoVertices.setZ(i, Math.sqrt(cylinderRadius ** 2 - x ** 2) - cylinderRadius);
+    }
+    const plateDepth = createPlateDepth();
+    const tileBevelGeo = createBeveledTileGeometry(1.22, 0.22, 0.12, 3, 12);
+    const tileFaceGeo = createTileFaceGeometry(1.10, 0.165);
 
     const tileBodyMat = new THREE.MeshPhysicalMaterial({
       color: 0x161616,
@@ -205,18 +271,24 @@ export function PressWheelCanvas({
       roughness: 0.22,
       clearcoat: 0.85,
       clearcoatRoughness: 0.16,
+      iridescence: 0.035,
+      iridescenceIOR: 1.38,
+      iridescenceThicknessMinimum: 185,
+      iridescenceThicknessMaximum: 320,
+      envMapIntensity: 0.75,
       transparent: true,
       opacity: 1,
     });
 
     const isDark = () => document.documentElement.dataset.theme === "dark";
-    const texturesToDispose: THREE.Texture[] = [envTex];
-    const materialsToDispose: THREE.Material[] = [tileBodyMat];
+    const texturesToDispose: THREE.Texture[] = [plateDepth];
+    const materialsToDispose: THREE.Material[] = [tileBodyMat, halo.material];
     const repainters: Array<(dark: boolean) => void> = [];
 
     const leftMeshes: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>[] = [];
     const rightGroups: Array<{
       group: THREE.Group;
+      body: THREE.Mesh<THREE.ExtrudeGeometry, THREE.MeshPhysicalMaterial>;
       bodyMat: THREE.MeshPhysicalMaterial;
       faceMat: THREE.MeshBasicMaterial;
     }> = [];
@@ -224,7 +296,7 @@ export function PressWheelCanvas({
     items.forEach((item, i) => {
       const dark = isDark();
       const plateTex = buildPlateTexture(item, i, dark);
-      texturesToDispose.push(plateTex.map, plateTex.depth);
+      texturesToDispose.push(plateTex.map);
       repainters.push(plateTex.repaint);
 
       const plateMat = new THREE.ShaderMaterial({
@@ -232,12 +304,12 @@ export function PressWheelCanvas({
         depthWrite: false,
         uniforms: {
           uMap: { value: plateTex.map },
-          uDepth: { value: plateTex.depth },
+          uDepth: { value: plateDepth },
           uPointer: { value: new THREE.Vector2(0.5, 0.5) },
           uVel: { value: new THREE.Vector2(0, 0) },
           uOpacity: { value: 1 },
           uActive: { value: 1 },
-          uBend: { value: 0.08 },
+          uHoverMix: { value: 0 },
           uGlitch: { value: 0 },
           uTime: { value: 0 },
         },
@@ -249,7 +321,7 @@ export function PressWheelCanvas({
       scene.add(plateMesh);
       leftMeshes.push(plateMesh);
 
-      const emblemMap = buildEmblemTexture(item, i);
+      const emblemMap = buildEmblemTexture(item);
       texturesToDispose.push(emblemMap);
       const bodyMat = tileBodyMat.clone();
       const faceMat = new THREE.MeshBasicMaterial({
@@ -265,13 +337,16 @@ export function PressWheelCanvas({
       faceMesh.position.z = 0.112;
       group.add(bodyMesh, faceMesh);
       scene.add(group);
-      rightGroups.push({ group, bodyMat, faceMat });
+      rightGroups.push({ group, body: bodyMesh, bodyMat, faceMat });
     });
 
-    const themeObs = new MutationObserver(() => {
+    const updateTheme = () => {
       const nextDark = isDark();
+      halo.material.uniforms.uInk.value.set(nextDark ? 0xd6d6d5 : 0x232323);
       repainters.forEach((fn) => fn(nextDark));
-    });
+    };
+    halo.material.uniforms.uInk.value.set(isDark() ? 0xd6d6d5 : 0x232323);
+    const themeObs = new MutationObserver(updateTheme);
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     let viewW = 1200;
@@ -289,96 +364,167 @@ export function PressWheelCanvas({
     resize();
     const ro = new ResizeObserver(resize);
     if (canvas.parentElement) ro.observe(canvas.parentElement);
+    let inView = true;
+    const observer = new IntersectionObserver(([entry]) => { inView = entry.isIntersecting; });
+    observer.observe(canvas);
 
     const N = items.length;
     let frameHandle = 0;
     let disposed = false;
-    let prevPos = simRef.current?.pos ?? 0;
+    let prevPos = simRef.current.pos;
     let smoothGlitch = 0;
-    const tStart = performance.now();
+    let iconHover = 0;
+    const iconTilt = new THREE.Vector2();
+    const hoverTilt = new THREE.Vector2();
+    const haloPointer = new THREE.Vector2();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const hits: THREE.Intersection[] = [];
+    let gpuFence: WebGLSync | null = null;
+    let frameTime = performance.now();
+    let elapsed = 0;
 
     function afterDraw(cb: () => void) {
       if (disposed) return;
       const gl2 = renderer.getContext() as WebGL2RenderingContext;
       if (typeof gl2.fenceSync === "function") {
-        const sync = gl2.fenceSync(gl2.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gpuFence = gl2.fenceSync(gl2.SYNC_GPU_COMMANDS_COMPLETE, 0);
         gl2.flush();
         const poll = () => {
-          if (disposed) {
-            if (sync) gl2.deleteSync(sync);
-            return;
-          }
-          const state = sync ? gl2.getSyncParameter(sync, gl2.SYNC_STATUS) : gl2.SIGNALED;
+          if (disposed) return;
+          const state = gpuFence ? gl2.getSyncParameter(gpuFence, gl2.SYNC_STATUS) : gl2.SIGNALED;
           if (state === gl2.UNSIGNALED) {
             frameHandle = window.setTimeout(poll, 5);
           } else {
-            if (sync) gl2.deleteSync(sync);
-            frameHandle = window.setTimeout(cb, 80);
+            if (gpuFence) gl2.deleteSync(gpuFence);
+            gpuFence = null;
+            frameHandle = window.setTimeout(cb, 24);
           }
         };
         frameHandle = window.setTimeout(poll, 5);
       } else {
-        frameHandle = window.setTimeout(cb, 80);
+        frameHandle = window.setTimeout(cb, 32);
       }
     }
 
     const tick = () => {
       if (disposed) return;
-      const nowSec = (performance.now() - tStart) * 0.001;
+      const now = performance.now();
+      const dt = Math.min(0.075, (now - frameTime) * 0.001);
+      frameTime = now;
+      if (!inView || document.hidden) {
+        frameHandle = requestAnimationFrame(tick);
+        return;
+      }
+      elapsed += dt;
       const s = simRef.current;
-      const stacked = viewW < 768 || Boolean(s?.stacked);
+      const stacked = viewW < 768 || s.stacked;
       const aspect = viewW / Math.max(1, viewH);
       const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * camera.position.z;
       const halfW = halfH * aspect;
 
-      const pos = s?.pos ?? 0;
+      const pos = s.pos;
       const deltaPos = pos - prevPos;
       prevPos = pos;
-      const targetGlitch = Math.min(1, (Math.abs(deltaPos) * 16 + Math.abs(s?.vel ?? 0) * 12));
-      smoothGlitch += (targetGlitch - smoothGlitch) * 0.18;
+      const targetGlitch = Math.min(1, Math.abs(deltaPos) * 12 + Math.abs(s.vel) * 12);
+      const ease = 1 - Math.exp(-13 * dt);
+      smoothGlitch = THREE.MathUtils.lerp(smoothGlitch, targetGlitch, ease);
       if (smoothGlitch < 0.005) smoothGlitch = 0;
 
-      const px = s?.pointerX ?? 0.5;
-      const py = s?.pointerY ?? 0.5;
-      const vx = s?.pointerVelX ?? 0;
-      const vy = s?.pointerVelY ?? 0;
+      const { pointerX: px, pointerY: py, pointerVelX: vx, pointerVelY: vy } = s;
+      const selected = ((Math.round(pos) % N) + N) % N;
+      const pointerActive = s.pointerActive && !s.dragging;
+      let plateHovered = false;
+      let iconHovered = false;
+      hoverTilt.set(0, 0);
+      pointer.set(px * 2 - 1, py * 2 - 1);
+      if (pointerActive) {
+        raycaster.setFromCamera(pointer, camera);
+        const icon = rightGroups[selected];
+        hits.length = 0;
+        raycaster.intersectObject(icon.body, false, hits);
+        const iconHit = hits[0];
+        if (iconHit) {
+          iconHovered = true;
+          const local = icon.group.worldToLocal(iconHit.point);
+          const tiltLimit = Math.PI / 15;
+          hoverTilt.set(
+            THREE.MathUtils.clamp(-local.y / 0.58, -1, 1) * tiltLimit,
+            THREE.MathUtils.clamp(local.x / 0.58, -1, 1) * tiltLimit,
+          );
+        } else {
+          hits.length = 0;
+          raycaster.intersectObject(leftMeshes[selected], false, hits);
+          plateHovered = hits.length > 0;
+        }
+      }
+      iconTilt.lerp(hoverTilt, ease);
+      iconHover = THREE.MathUtils.lerp(iconHover, Number(iconHovered), ease);
+
+      const haloRadius = stacked ? Math.min(halfH * 0.74, halfW * 1.18) : Math.min(halfH * 0.83, halfW * 0.72);
+      halo.position.set(halfW * 0.10, stacked ? halfH * 0.10 : -halfH * 0.055, -0.65);
+      halo.scale.setScalar(haloRadius);
+      const haloUniforms = halo.material.uniforms;
+      if (pointerActive) {
+        const depthFactor = (camera.position.z - halo.position.z) / camera.position.z;
+        haloPointer.set(
+          (pointer.x * halfW * depthFactor - halo.position.x) / haloRadius,
+          (pointer.y * halfH * depthFactor - halo.position.y) / haloRadius,
+        );
+        haloUniforms.uPointer.value.lerp(haloPointer, ease);
+      }
+      haloUniforms.uInfluence.value = THREE.MathUtils.lerp(haloUniforms.uInfluence.value, Number(pointerActive), ease);
+      haloUniforms.uTime.value = elapsed;
+
+      const leftFloat = Math.sin(elapsed * 1.35) * 0.05;
+      const rightFloat = Math.sin(elapsed * 1.11 + 1.5) * 0.05;
+      const leftBreath = Math.sin(elapsed * 1.17 + 0.8) * (Math.PI / 120);
+      const rightBreath = Math.sin(elapsed * 1.31 + 2.4) * (Math.PI / 120);
+      const titleClearance = (Math.min(152, viewW * 0.185) / viewW) * (2 * halfW);
+      const inspectionDepth = 0.4;
+      const inspectionScale = 1.12;
+      const maxPerspective = camera.position.z / (camera.position.z - inspectionDepth - 0.08);
+      const desktopPlateScale = Math.min(1, (halfW - titleClearance - 0.16) / (3.2 * inspectionScale * maxPerspective));
+      const plateCenter = -(halfW + titleClearance) * 0.5;
+      const desktopIconScale = Math.min(1, halfW * 0.38);
 
       for (let i = 0; i < N; i++) {
         const off = wrapHalfOffset(i - pos, N);
         const absOff = Math.abs(off);
-        const activeWeight = Math.max(0, 1 - absOff * 0.85);
+        const activeWeight = 1 - THREE.MathUtils.smoothstep(absOff, 0, 1);
 
         const L = leftMeshes[i];
         const R = rightGroups[i];
-
+        const uniforms = L.material.uniforms;
+        const inspection = THREE.MathUtils.lerp(uniforms.uHoverMix.value, Number(plateHovered && i === selected), ease);
+        uniforms.uHoverMix.value = inspection;
         if (stacked) {
           const angle = off * 0.72;
           const rad = halfH * 0.28;
-          const lx = -halfW * 0.16 + Math.sin(angle) * (halfW * 0.22);
+          const lx = -halfW * 0.38 + Math.sin(angle) * (halfW * 0.22);
           const ly = halfH * 0.34 - Math.sin(angle) * rad;
           const lz = Math.cos(angle) * 0.55 - 0.55;
           const lVis = absOff < 1.65;
           const lOpacity = lVis ? Math.max(0, 1 - absOff * 0.62) : 0;
 
           L.visible = lOpacity > 0.02;
-          L.position.set(lx, ly, lz);
-          L.rotation.set(off * 0.14, -off * 0.18, -off * 0.24);
-          const ls = (0.64 - Math.min(0.22, absOff * 0.12)) * Math.min(1, aspect * 1.4);
-          L.scale.setScalar(Math.max(0.28, ls));
-          L.material.uniforms.uOpacity.value = lOpacity;
-          L.material.uniforms.uActive.value = activeWeight;
-          L.material.uniforms.uPointer.value.set(px, py);
-          L.material.uniforms.uVel.value.set(vx, vy);
-          L.material.uniforms.uGlitch.value = smoothGlitch;
-          L.material.uniforms.uTime.value = nowSec;
+          L.position.set(lx, ly + leftFloat * activeWeight, lz + inspection * 0.2);
+          L.rotation.set(off * 0.14 + leftBreath * activeWeight, -off * 0.18, -off * 0.24);
+          const ls = Math.min(0.64, halfW * 0.36) * (1 - Math.min(0.34, absOff * 0.16));
+          L.scale.setScalar(ls * (1 + 0.12 * inspection));
+          uniforms.uOpacity.value = lOpacity;
 
-          const rx = halfW * 0.42 - Math.cos(angle * 1.1) * 0.16;
+          const rx = halfW * (0.78 - 0.23 * activeWeight) - Math.cos(angle * 1.1) * 0.06;
           const ry = halfH * 0.4 + Math.sin(-angle * 1.1) * rad * 0.75;
           const rOpacity = lVis ? Math.max(0, 1 - absOff * 0.68) : 0;
           R.group.visible = rOpacity > 0.02;
-          R.group.position.set(rx, ry, lz - 0.1);
-          R.group.rotation.set((py - 0.5) * 0.16, -0.25 + (px - 0.5) * 0.22, -0.14 - off * 0.44);
-          R.group.scale.setScalar(Math.max(0.32, ls * 0.8));
+          R.group.position.set(rx, ry + rightFloat * activeWeight, lz - 0.1 + 0.36 * activeWeight);
+          R.group.rotation.set(
+            (rightBreath + iconTilt.x) * activeWeight,
+            -0.25 + (0.19 + iconTilt.y) * activeWeight,
+            -0.14 * (1 - activeWeight) - off * 0.44,
+          );
+          R.group.scale.setScalar(Math.min(0.65, halfW * 0.31) * (1 + activeWeight * 0.25));
           R.bodyMat.opacity = rOpacity;
           R.faceMat.opacity = rOpacity;
         } else {
@@ -392,38 +538,47 @@ export function PressWheelCanvas({
           const lOpacity = lVis ? Math.max(0, 1 - Math.max(0, absOff - 1.05) * 0.92) : 0;
 
           L.visible = lOpacity > 0.02;
-          L.position.set(lx, ly, lz);
-          L.rotation.set(off * 0.1, 0.22 - off * 0.14, off * 0.42);
-          const ls = 1 - Math.min(0.34, absOff * 0.16);
-          L.scale.setScalar(ls);
-          L.material.uniforms.uOpacity.value = lOpacity;
-          L.material.uniforms.uActive.value = activeWeight;
-          L.material.uniforms.uPointer.value.set(px, py);
-          L.material.uniforms.uVel.value.set(vx, vy);
-          L.material.uniforms.uBend.value = 0.08 + Math.min(0.18, smoothGlitch * 0.14);
-          L.material.uniforms.uGlitch.value = smoothGlitch;
-          L.material.uniforms.uTime.value = nowSec;
+          const lift = inspectionDepth * inspection;
+          const centeredX = plateCenter * (1 - lift / camera.position.z);
+          L.position.set(THREE.MathUtils.lerp(lx, centeredX, activeWeight), ly + leftFloat * activeWeight, lz + lift);
+          L.rotation.set(off * 0.1 + leftBreath * activeWeight, (0.22 - off * 0.14) * (1 - inspection * 0.8), off * 0.42);
+          const ls = desktopPlateScale * (1 - Math.min(0.34, absOff * 0.16));
+          L.scale.setScalar(ls * THREE.MathUtils.lerp(1, inspectionScale, inspection));
+          uniforms.uOpacity.value = lOpacity;
 
           const rAngle = -off * 1.45;
           const rRadiusX = halfW * 0.34;
           const rRadiusY = halfH * 0.64;
-          const rx = halfW * 0.95 - Math.cos(rAngle) * rRadiusX;
+          const arcX = halfW * 0.95 - Math.cos(rAngle) * rRadiusX;
+          const selectedX = Math.max(halfW * 0.43, titleClearance + desktopIconScale * 0.76);
+          const rx = THREE.MathUtils.lerp(arcX, selectedX, activeWeight);
           const ry = -halfH * 0.02 + Math.sin(rAngle) * rRadiusY;
-          const rz = Math.cos(rAngle) * 0.75 - 0.75;
+          const rz = Math.cos(rAngle) * 0.75 - 0.75 + 0.47 * activeWeight;
           const rVis = absOff < 1.9;
           const rOpacity = rVis ? Math.max(0, 1 - Math.max(0, absOff - 0.95) * 0.95) : 0;
 
           R.group.visible = rOpacity > 0.02;
-          R.group.position.set(rx, ry, rz);
+          R.group.position.set(rx, ry + rightFloat * activeWeight, rz);
           R.group.rotation.set(
-            -off * 0.08 + (py - 0.5) * 0.22 * activeWeight,
-            -0.28 + off * 0.14 + (px - 0.5) * 0.26 * activeWeight,
-            -0.14 - off * 0.56,
+            -off * 0.08 + (rightBreath + iconTilt.x) * activeWeight,
+            -0.28 + off * 0.14 + (0.23 + iconTilt.y) * activeWeight,
+            -0.14 * (1 - activeWeight) - off * 0.56,
           );
-          const rs = 1 - Math.min(0.26, absOff * 0.14);
+          const rs = desktopIconScale * (1 + 0.25 * activeWeight - Math.min(0.26, absOff * 0.14));
           R.group.scale.setScalar(rs);
           R.bodyMat.opacity = rOpacity;
           R.faceMat.opacity = rOpacity;
+        }
+        if (L.visible) {
+          uniforms.uActive.value = activeWeight;
+          uniforms.uPointer.value.set(pointerActive ? px : 0.5, pointerActive ? py : 0.5);
+          uniforms.uVel.value.set(vx, vy);
+          uniforms.uGlitch.value = smoothGlitch;
+          uniforms.uTime.value = elapsed;
+        }
+        if (R.group.visible) {
+          R.bodyMat.iridescence = 0.035 + 0.37 * activeWeight * iconHover;
+          R.bodyMat.clearcoatRoughness = 0.16 - 0.065 * activeWeight * iconHover;
         }
       }
 
@@ -440,10 +595,14 @@ export function PressWheelCanvas({
       cancelAnimationFrame(frameHandle);
       window.clearTimeout(frameHandle);
       ro.disconnect();
+      observer.disconnect();
       themeObs.disconnect();
+      if (gpuFence) (gl as WebGL2RenderingContext).deleteSync(gpuFence);
       photoGeo.dispose();
       tileBevelGeo.dispose();
       tileFaceGeo.dispose();
+      halo.geometry.dispose();
+      environment.dispose();
       materialsToDispose.forEach((m) => m.dispose());
       texturesToDispose.forEach((t) => t.dispose());
       renderer.dispose();

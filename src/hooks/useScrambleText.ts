@@ -8,6 +8,8 @@ export interface UseScrambleTextOptions {
   intervalMs?: number;
   glyphs?: string;
   animateOnMount?: boolean;
+  refreshKey?: number;
+  canRefresh?: () => boolean;
 }
 
 export function useScrambleText(
@@ -19,10 +21,13 @@ export function useScrambleText(
     intervalMs = 34,
     glyphs = DEFAULT_SCRAMBLE_GLYPHS,
     animateOnMount = false,
+    refreshKey = 0,
+    canRefresh,
   } = options;
 
   const [frame, setFrame] = useState({ target: targetText, text: targetText, running: false });
   const firstRunRef = useRef(true);
+  const previous = useRef({ targetText, refreshKey });
 
   useLayoutEffect(() => {
     const reduced =
@@ -30,6 +35,8 @@ export function useScrambleText(
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const skip = reduced || (firstRunRef.current && !animateOnMount);
+    const refreshing = previous.current.targetText === targetText && previous.current.refreshKey !== refreshKey;
+    previous.current = { targetText, refreshKey };
     firstRunRef.current = false;
 
     if (skip) return;
@@ -41,6 +48,10 @@ export function useScrambleText(
 
     const step = (now: number) => {
       if (cancelled) return;
+      if (refreshing && canRefresh && !canRefresh()) {
+        setFrame({ target: targetText, text: targetText, running: false });
+        return;
+      }
       const elapsed = now - start;
       const progress = Math.min(1, elapsed / Math.max(1, durationMs));
       const tick = Math.floor(elapsed / Math.max(16, intervalMs));
@@ -61,7 +72,7 @@ export function useScrambleText(
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [targetText, durationMs, intervalMs, glyphs, animateOnMount]);
+  }, [targetText, durationMs, intervalMs, glyphs, animateOnMount, refreshKey, canRefresh]);
 
   return frame.target === targetText
     ? { displayText: frame.text, isScrambling: frame.running }
