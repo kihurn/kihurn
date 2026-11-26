@@ -38,7 +38,9 @@ test.describe("Gigs", () => {
     await page.goto("/gigs");
     await hydrated(page);
     const pass = page.getByRole("button", { name: /crew pass/i });
-    await expect(pass).toContainText("CREW · ALL ACCESS");
+    await expect(pass.locator(".lanyard__front")).toHaveText("Wong Ki Hurn");
+    await expect(pass.locator(".lanyard__photo")).toHaveCount(0);
+    await expect.poll(() => pass.evaluate((element) => (element as HTMLElement).offsetWidth)).toBeGreaterThanOrEqual(245);
     await expect(pass).toHaveAttribute("aria-pressed", "false");
     await page.waitForFunction(() => {
       const pass = document.querySelector(".lanyard__badge")?.getBoundingClientRect();

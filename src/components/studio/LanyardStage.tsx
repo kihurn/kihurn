@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
-import { HalftonePortrait } from "@/components/chrome/HalftonePortrait";
 import { eventPortfolioQr } from "@/content/gigs";
 import {
   computeBadgePose,
@@ -101,12 +100,12 @@ export function LanyardStage() {
       }
       const dt = lastFrame ? Math.min(.028, (now - lastFrame) / 1000) : 1 / 60;
       lastFrame = now;
-      const drop = Math.min(1, Math.max(0, (now - started) / 530));
+      const drop = Math.min(1, Math.max(0, (now - started) / 760));
       anchorY = restY + (startY - restY) * (1 - drop) ** 3;
       setChainAnchor(chain, rect.width * .5, anchorY);
       stepVerletChain(chain, {
-        gravity: .72,
-        damping: drag ? .94 : .978,
+        gravity: .62,
+        damping: drag ? .94 : .985,
         iterations: 10,
         bounds: {
           minX: 45,
@@ -219,21 +218,13 @@ export function LanyardStage() {
           if (!event.repeat) setFlipped((value) => !value);
         }}
       >
-        <div className="lanyard__clip" aria-hidden="true" />
+        <div className="lanyard__clip" aria-hidden="true"><span /></div>
         <div className="lanyard__flipper" data-pass-inner>
           <div className="lanyard__face lanyard__front" aria-hidden={flipped}>
-            <div className="lanyard__photo"><HalftonePortrait variant="badge" /></div>
-            <div>
-              <p className="lanyard__label text-mono-sm">EVENT CREW</p>
-              <strong>Wong Ki Hurn</strong>
-              <p className="lanyard__label text-mono-sm">CREW · ALL ACCESS</p>
-            </div>
+            <strong className="lanyard__print">Wong Ki Hurn</strong>
           </div>
           <div className="lanyard__face lanyard__back" data-pass-back aria-hidden={!flipped}>
-            <div>
-              <p className="lanyard__label text-mono-sm">KIHURN</p>
-              <strong>Event portfolio</strong>
-            </div>
+            <strong className="lanyard__print">Event portfolio</strong>
             <Image className="lanyard__qr" src={eventPortfolioQr} width={QR_SIZE} height={QR_SIZE} alt="QR code for the event portfolio" unoptimized />
           </div>
         </div>
