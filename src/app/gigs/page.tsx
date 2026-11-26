@@ -5,7 +5,7 @@ import "../../styles/lab.css";
 import "../../styles/pages.css";
 import { EventShowcase } from "@/components/gigs/EventShowcase";
 import { LanyardStage } from "@/components/studio/LanyardStage";
-import { events } from "@/content/gigs";
+import { eventPortfolioUrl, events } from "@/content/gigs";
 import { media } from "@/data/media";
 import { availableMedia } from "@/lib/server/media";
 
@@ -26,7 +26,10 @@ export default function GigsPage() {
             <h1 id="gigs-h" className="text-display">Gigs</h1>
             <p className="text-body page__intro">Event crew work and studio practice.</p>
           </div>
-          <a className="gigs__jump" href="#events">Browse events <ArrowDown size={18} aria-hidden="true" /></a>
+          <div className="gigs__links">
+            <a className="gigs__jump" href={eventPortfolioUrl}>Event portfolio</a>
+            <a className="gigs__jump" href="#events">Browse events <ArrowDown size={18} aria-hidden="true" /></a>
+          </div>
         </header>
       </section>
 

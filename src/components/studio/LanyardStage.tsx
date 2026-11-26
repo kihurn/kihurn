@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import { HalftonePortrait } from "@/components/chrome/HalftonePortrait";
-import { crewRoles } from "@/content/gigs";
+import { eventPortfolioQr } from "@/content/gigs";
 import {
   computeBadgePose,
   createVerletChain,
@@ -11,7 +12,7 @@ import {
   setChainAnchor,
   stepVerletChain,
 } from "@/lib/physics/verlet";
-import { createLanyardScene } from "./lanyardScene";
+import { BADGE_HEIGHT, BADGE_TOP, BADGE_WIDTH, QR_SIZE, STRAP_WIDTH, createLanyardScene } from "./lanyardScene";
 
 function subscribeToReducedMotion(callback: () => void) {
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -41,7 +42,8 @@ export function LanyardStage() {
     const restY = -8;
     const startY = reduced ? restY : -rect.height - 32;
     const chain = createVerletChain(rect.width * .5, startY, 10, 20, reduced ? 0 : 36);
-    const scene = canvasRef.current ? createLanyardScene(canvasRef.current, chain) : undefined;
+    const canvas = canvasRef.current;
+    const scene = canvas ? createLanyardScene(canvas, chain, () => paint(0)) : undefined;
     if (scene) stage.dataset.glReady = "";
     stage.dataset.ready = "";
 
@@ -50,6 +52,7 @@ export function LanyardStage() {
     let frame = 0;
     let visible = true;
     let anchorY = startY;
+    let maxY = rect.height;
     let drag: { id: number; offsetX: number; offsetY: number; x: number; y: number; originY: number; distance: number; vx: number; vy: number } | undefined;
 
     function paint(dt: number) {
@@ -65,7 +68,7 @@ export function LanyardStage() {
         return `Q ${node.x} ${node.y} ${(node.x + next.x) * .5} ${(node.y + next.y) * .5}`;
       });
       path.setAttribute("d", `M ${nodes[0].x} ${nodes[0].y} ${curves.join(" ")} L ${tail.x} ${tail.y}`);
-      badge.style.transform = `translate3d(${pose.x - 140}px,${pose.y - 10}px,0) rotate(${pose.angleDeg}deg) rotateX(${xTilt}deg) rotateY(${yTilt}deg) scale(${scale})`;
+      badge.style.transform = `translate3d(${pose.x - BADGE_WIDTH / 2}px,${pose.y - 8}px,0) rotate(${pose.angleDeg}deg) rotateX(${xTilt}deg) rotateY(${yTilt}deg) scale(${scale})`;
       scene?.draw(badge.dataset.flipped === "true", dt);
     }
 
@@ -73,6 +76,8 @@ export function LanyardStage() {
       if (!stage) return;
       const oldCenter = rect.width * .5;
       rect = stage.getBoundingClientRect();
+      const renderHeight = canvas?.clientHeight || rect.height;
+      maxY = renderHeight - BADGE_TOP - BADGE_HEIGHT - 16;
       const center = rect.width * .5;
       chain.segmentLength = Math.min(24, Math.max(17, rect.height * .036));
       for (const [i, node] of chain.nodes.entries()) {
@@ -84,7 +89,7 @@ export function LanyardStage() {
         }
       }
       setChainAnchor(chain, center, anchorY);
-      scene?.resize(rect.width, rect.height);
+      scene?.resize(rect.width, renderHeight);
       paint(0);
     }
 
@@ -107,7 +112,7 @@ export function LanyardStage() {
           minX: 45,
           maxX: Math.max(46, rect.width - 45),
           minY: startY,
-          maxY: rect.height - 130,
+          maxY,
         },
       });
       paint(dt);
@@ -135,7 +140,7 @@ export function LanyardStage() {
       drag.x = event.clientX;
       drag.y = event.clientY;
       const x = Math.max(45, Math.min(rect.width - 45, drag.x - rect.left + drag.offsetX));
-      const y = Math.max(12, Math.min(rect.height - 130, drag.y - rect.top + drag.offsetY));
+      const y = Math.max(12, Math.min(maxY, drag.y - rect.top + drag.offsetY));
       const z = Math.max(-80, Math.min(80, (drag.y - drag.originY) * .45));
       pinTailToPoint(chain, x, y, z);
     }
@@ -162,7 +167,7 @@ export function LanyardStage() {
         frame = requestAnimationFrame(tick);
       }
     });
-    intersection.observe(stage);
+    intersection.observe(canvas ?? stage);
     const flipObserver = new MutationObserver(() => {
       if (reduced || !visible) paint(0);
     });
@@ -194,16 +199,17 @@ export function LanyardStage() {
     <div ref={stageRef} className="lanyard__stage">
       <canvas ref={canvasRef} className="lanyard__gl" aria-hidden="true" />
       <svg className="lanyard__cord" aria-hidden="true">
-        <path ref={pathRef} className="lanyard__strap" fill="none" strokeWidth="12" strokeLinecap="round" />
+        <path ref={pathRef} className="lanyard__strap" fill="none" strokeWidth={STRAP_WIDTH} strokeLinecap="round" />
       </svg>
       <div
         ref={badgeRef}
         className="lanyard__badge"
+        style={{ width: BADGE_WIDTH, height: BADGE_HEIGHT + BADGE_TOP, transformOrigin: `${BADGE_WIDTH / 2}px 8px` }}
         data-flipped={flipped}
         tabIndex={0}
         role="button"
         aria-pressed={flipped}
-        aria-label="Crew pass. Flip to view crew roles."
+        aria-label="Crew pass. Flip to view the event portfolio QR code."
         onClick={(event) => {
           if (reduced || event.detail === 0) setFlipped((value) => !value);
         }}
@@ -216,16 +222,19 @@ export function LanyardStage() {
         <div className="lanyard__clip" aria-hidden="true" />
         <div className="lanyard__flipper" data-pass-inner>
           <div className="lanyard__face lanyard__front" aria-hidden={flipped}>
-            <div className="lanyard__fhead text-mono-sm">KIHURN <span>EVENT CREW</span></div>
             <div className="lanyard__photo"><HalftonePortrait variant="badge" /></div>
-            <strong className="text-h5">Wong Ki Hurn</strong>
-            <p className="lanyard__access text-mono-meta">CREW · ALL ACCESS</p>
+            <div>
+              <p className="lanyard__label text-mono-sm">EVENT CREW</p>
+              <strong>Wong Ki Hurn</strong>
+              <p className="lanyard__label text-mono-sm">CREW · ALL ACCESS</p>
+            </div>
           </div>
           <div className="lanyard__face lanyard__back" data-pass-back aria-hidden={!flipped}>
-            <div className="lanyard__fhead text-mono-sm">CREW ROLES</div>
-            <ul className="lanyard__roles text-mono-meta">
-              {crewRoles.map((role) => <li key={role}>{role}</li>)}
-            </ul>
+            <div>
+              <p className="lanyard__label text-mono-sm">KIHURN</p>
+              <strong>Event portfolio</strong>
+            </div>
+            <Image className="lanyard__qr" src={eventPortfolioQr} width={QR_SIZE} height={QR_SIZE} alt="QR code for the event portfolio" unoptimized />
           </div>
         </div>
       </div>

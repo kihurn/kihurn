@@ -1,9 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { eventPortfolioUrl } from "../../src/content/gigs";
 
 const hydrated = (page: Page) =>
   page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
-
-const ROLES = ["Internal usher", "External usher", "Registration", "Ticket collection", "Photographer", "Projectionist", "Runner"];
 
 test.describe("About", () => {
   test("timeline names the school, the employer and the university", async ({ page }) => {
@@ -35,7 +34,7 @@ test.describe("About", () => {
 });
 
 test.describe("Gigs", () => {
-  test("the crew pass flips on click or tap and lists all seven roles", async ({ page, isMobile }) => {
+  test("the portrait crew pass flips to the event portfolio QR code", async ({ page, isMobile }) => {
     await page.goto("/gigs");
     await hydrated(page);
     const pass = page.getByRole("button", { name: /crew pass/i });
@@ -48,7 +47,11 @@ test.describe("Gigs", () => {
     if (isMobile) await pass.tap({ force: true });
     else await pass.click({ force: true });
     await expect(pass).toHaveAttribute("aria-pressed", "true");
-    for (const r of ROLES) await expect(page.locator("[data-pass-back]").getByText(r, { exact: true })).toBeVisible();
+    const qr = page.getByRole("img", { name: "QR code for the event portfolio" });
+    await expect(qr).toHaveAttribute("src", "/images/event-portfolio-qr.png");
+    await expect(page.getByRole("link", { name: "Event portfolio", exact: true })).toHaveAttribute("href", eventPortfolioUrl);
+    const ratio = await page.locator("[data-pass-back]").evaluate((face) => (face as HTMLElement).offsetHeight / (face as HTMLElement).offsetWidth);
+    expect(ratio).toBeCloseTo(1.59);
   });
 
   test("the crew pass flips with the keyboard", async ({ page }) => {
@@ -73,21 +76,21 @@ test.describe("Gigs", () => {
     for (const v of d) expect(v.split(",").every((x) => parseFloat(x) === 0)).toBe(true);
   });
 
-  test("four event cards scroll horizontally and open role details", async ({ page, isMobile }) => {
+  test("clicking or tapping sends the front Polaroid to the back and loops the stack", async ({ page, isMobile }) => {
     await page.goto("/gigs");
     await hydrated(page);
     const cards = page.locator("[data-event]");
     await expect(cards).toHaveCount(4);
-    await page.getByRole("button", { name: "Next event" }).click();
-    await expect.poll(() => page.locator(".events").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-    const event = page.getByRole("button", { name: "Circus Funtasia" });
-    if (isMobile) await event.tap();
-    else await event.click();
-    const details = page.getByRole("dialog", { name: "Circus Funtasia" });
-    await expect(details).toContainText("Event Crew & Production");
-    await details.getByRole("button", { name: "Close" }).click();
-    await expect(details).not.toBeVisible();
-    await expect(event).toBeFocused();
+    const stack = page.getByRole("button", { name: /next photo/i });
+    await expect(stack).toHaveAccessibleName(/WNBF Malaysia 2025/);
+    if (isMobile) await stack.tap();
+    else await stack.click();
+    await expect(stack).toHaveAccessibleName(/Circus Funtasia/);
+    await expect(cards.filter({ hasText: "WNBF Malaysia 2025" })).toHaveAttribute("data-stack-position", "3");
+    await expect(page.getByText("Event Crew & Production", { exact: true })).toBeVisible();
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next event" }).click();
+    await expect(stack).toHaveAccessibleName(/WNBF Malaysia 2025/);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
   test("the former Studio route leads to the combined Gigs page", async ({ page }) => {

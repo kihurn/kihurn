@@ -1,13 +1,6 @@
 
-export const crewRoles = [
-  "Internal usher",
-  "External usher",
-  "Registration",
-  "Ticket collection",
-  "Photographer",
-  "Projectionist",
-  "Runner",
-] as const;
+export const eventPortfolioUrl = "https://drive.google.com/file/d/1z2LhKyoNq_zZ9XKWbumZkt7jKeEqG6_f/view?usp=sharing";
+export const eventPortfolioQr = "/images/event-portfolio-qr.png";
 
 export interface GigEvent {
   slug: string;
