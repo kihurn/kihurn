@@ -39,7 +39,7 @@ const projectItems: LabItem[] = wheelOrder(projects).map((p) => ({
   tag: LENS_LABEL[p.lenses[0]] ?? "SYSTEMS",
   pill: projectTag(p),
   href: projectHref(p),
-  year: p.finishedOn && /^\d{4}/.test(p.finishedOn) ? p.finishedOn.slice(0, 4) : p.status === "building" ? "WIP" : "LIVE",
+  year: p.finishedOn?.slice(0, 4),
   summary: p.summary,
   kind: "project",
   photo: photos[p.slug],
@@ -57,9 +57,9 @@ export default function LabPage() {
 
       <div className="labpage__rest">
         <header className="labpage__head">
-          <h2 className="text-display">Everything I&apos;ve built</h2>
+          <h2 className="text-display">Project index</h2>
           <p className="text-body labpage__intro">
-            The finished work first, then what&apos;s still in progress. Start with how my AI projects connect.
+            Finished work, projects in development, and concepts I&apos;m exploring.
           </p>
         </header>
 

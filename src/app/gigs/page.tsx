@@ -6,6 +6,7 @@ import "../../styles/pages.css";
 import { EventShowcase } from "@/components/gigs/EventShowcase";
 import { LanyardStage } from "@/components/studio/LanyardStage";
 import { eventPortfolioUrl, events } from "@/content/gigs";
+import { site } from "@/content/site";
 import { media } from "@/data/media";
 import { availableMedia } from "@/lib/server/media";
 
@@ -61,10 +62,10 @@ export default function GigsPage() {
       </section>
 
       <section className="page__sec" aria-label="Scrapbook">
-        <a className="book" href="https://kihurn-book.vercel.app">
+        <a className="book" href={site.bookSource}>
           <span className="book__k text-mono-meta">Scrapbook</span>
           <span className="book__t text-display">Open the scrapbook</span>
-          <span className="book__d text-body">My old portfolio, a 3D book you can flip through. Best on desktop.</span>
+          <span className="book__d text-body">Source code and setup instructions for my earlier 3D book portfolio.</span>
         </a>
       </section>
     </main>

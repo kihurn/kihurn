@@ -236,7 +236,7 @@ export function paintProjectPlateCanvas(
 
   ctx.fillStyle = muted;
   ctx.font = '500 13px "Geist Mono Variable", ui-monospace, monospace';
-  ctx.fillText(`${item.lens} · ${item.role} · ${item.year}`, 28, h - 28);
+  ctx.fillText([item.lens, item.role, item.year].filter(Boolean).join(" · "), 28, h - 28);
 }
 
 export function paintIconEmblemCanvas(

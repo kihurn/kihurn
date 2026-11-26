@@ -11,7 +11,7 @@ import { now } from "@/content/now";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Wong Ki Hurn: Computer Science student and part-time system engineer in Subang Jaya, Malaysia.",
+  description: "Wong Ki Hurn is a full-stack developer, Computer Science student and part-time system engineer in Subang Jaya, Malaysia.",
 };
 
 export const revalidate = 3600;

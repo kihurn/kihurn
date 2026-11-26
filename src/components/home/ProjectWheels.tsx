@@ -10,11 +10,11 @@ export interface WheelItem {
   name: string;
   tag: string;
   lens: string;
-  role: string;
-  year: string;
+  role?: string;
+  year?: string;
   href: string;
   photo?: string;
-  plate: string;
+  plate?: string;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -246,7 +246,8 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     durationMs: 440,
     intervalMs: 32,
   });
-  const { displayText: scrambledMeta } = useScrambleText(`${p.role} — ${p.year}`, {
+  const meta = [p.role, p.year].filter(Boolean).join(" — ");
+  const { displayText: scrambledMeta } = useScrambleText(meta, {
     durationMs: 360,
     intervalMs: 30,
   });
@@ -283,7 +284,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
               <span className="chip text-meta">{p.tag}</span>
               <span className="chip text-meta chip--pill">{p.lens}</span>
             </div>
-            <p className="hv2__meta text-mono-sm u-muted">{scrambledMeta}</p>
+            {meta ? <p className="hv2__meta text-mono-sm u-muted">{scrambledMeta}</p> : null}
             <div className="hv2__ctarow">
               <a href={p.href} className="btn btn--solid text-tag">
                 <span className="btn__label roll" data-roll>

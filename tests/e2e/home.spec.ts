@@ -59,6 +59,7 @@ test("the centre link opens the project's entry", async ({ page }) => {
 test("the page does not scroll-jack the wheel", async ({ page }) => {
   await page.goto("/");
   await hydrated(page);
+  await expect(page.locator("[data-preloader-overlay]")).toHaveCount(0);
   const stage = page.locator("[data-wheels]");
   const box = (await stage.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

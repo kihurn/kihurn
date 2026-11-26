@@ -87,9 +87,18 @@ test("every case study page renders", async ({ page }) => {
   }
 });
 
-test("the 3D book card links to the book site", async ({ page }) => {
+test("the 3D book card links to the source repository", async ({ page }) => {
   await page.goto("/lab");
-  await expect(page.getByRole("link", { name: /3D book/i })).toHaveAttribute("href", "https://kihurn-book.vercel.app");
+  await expect(page.getByRole("link", { name: /scrapbook the 3D book/i })).toHaveAttribute("href", "https://github.com/kihurn/Interactive-Book");
+});
+
+test("concepts have their own section and link to the concept repository", async ({ page }) => {
+  await page.goto("/lab");
+  const concepts = page.getByRole("region", { name: "Concepts" });
+  const remy = concepts.locator("#remy");
+  await expect(remy).toContainText("CONCEPT");
+  await expect(remy.getByRole("link", { name: /github/i })).toHaveAttribute("href", "https://github.com/kihurn/Remy");
+  await expect(page.getByRole("region", { name: "In progress" }).locator("#v4ult")).toContainText("IN DEVELOPMENT");
 });
 
 test("loading /lab never fetches face-api or the model files", async ({ page }) => {

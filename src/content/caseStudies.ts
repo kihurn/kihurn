@@ -23,7 +23,7 @@ export const caseStudies: Record<string, CaseStudy> = {
       "Gate: look up by ID or ticket, stamp attendance once",
     ],
     result:
-      "1,800 registrations, 300 on the waitlist and about 1,200 attendees. The system was load-tested with Grafana k6.",
+      "The platform served an intake of 4,000–5,000 freshmen, handled 1,800 registrations and a 300-person waitlist, and checked in about 1,200 attendees. I load-tested it with Grafana k6 before launch.",
   },
   securefin: {
     problem:

@@ -116,8 +116,8 @@ test.describe("Gigs", () => {
     await expect(page.getByRole("heading", { name: "Practice & availability" })).toBeVisible();
   });
 
-  test("the scrapbook link goes to the book site", async ({ page }) => {
+  test("the scrapbook link goes to the book repository", async ({ page }) => {
     await page.goto("/gigs");
-    await expect(page.getByRole("link", { name: /open the scrapbook/i })).toHaveAttribute("href", "https://kihurn-book.vercel.app");
+    await expect(page.getByRole("link", { name: /open the scrapbook/i })).toHaveAttribute("href", "https://github.com/kihurn/Interactive-Book");
   });
 });

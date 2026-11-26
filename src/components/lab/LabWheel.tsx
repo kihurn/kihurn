@@ -13,7 +13,7 @@ export interface LabItem {
   tag: string;
   pill: string;
   href: string;
-  year: string;
+  year?: string;
   summary: string;
   kind: "experiment" | "project";
   photo?: string;
@@ -376,7 +376,7 @@ export function LabWheel({ items }: { items: LabItem[] }) {
                     <span className="lab__trow-tag text-mono-sm u-muted">{e.tag}</span>
                     <span className="lab__trow-pill text-mono-sm">
                       <span className="chip text-meta chip--pill">{e.pill}</span>
-                      <span className="u-muted">{e.year}</span>
+                      {e.year ? <span className="u-muted">{e.year}</span> : null}
                     </span>
                     <span className="lab__trow-go text-mono-sm">
                       {e.kind === "experiment" ? "STAGE →" : "OPEN →"}

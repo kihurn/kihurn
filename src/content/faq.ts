@@ -8,7 +8,7 @@ export const faq: FaqEntry[] = [
     question: "Who is Ki Hurn?",
     keywords: ["who", "about", "introduce", "introduction", "student", "bio"],
     answer:
-      "Wong Ki Hurn is a Computer Science (Honours) student at Taylor's University in Subang Jaya, focusing on AI and cybersecurity, and a part-time System Engineer at Ideabase Technologies, on site at Sunway University. He leans towards backend, systems and networking work.",
+      "Wong Ki Hurn is a Computer Science student at Taylor's University and a part-time System Engineer at Ideabase Technologies, based at Sunway University. He builds full-stack apps with React, TypeScript, Node.js and PostgreSQL and focuses on backend systems.",
   },
   {
     id: "skills",
@@ -22,7 +22,7 @@ export const faq: FaqEntry[] = [
     question: "Is he available for an internship?",
     keywords: ["available", "availability", "internship", "internships", "intern", "hire", "hiring", "open"],
     answer:
-      "He's open to internships (it's in the status bar). He's studying for his BCS until September 2027. For dates and details, use the contact page or email " +
+      "He's looking for internships in software engineering, cybersecurity or systems engineering. He expects to finish his degree in September 2027. For dates and details, use the contact page or email " +
       site.email +
       ".",
   },
@@ -40,14 +40,14 @@ export const faq: FaqEntry[] = [
     question: "Does he have networking experience?",
     keywords: ["networking", "network", "networks", "cisco", "switch", "switches", "firewall", "firewalls", "sunway", "ideabase", "infrastructure"],
     answer:
-      "Yes. Since April 2025 he's a part-time System Engineer at Ideabase Technologies, on site at Sunway University: campus network infrastructure, monitoring, deploying switches, access points and firewalls, troubleshooting and documentation. Before that he was a Network Infrastructure Intern at Sunway (Jan to Mar 2025): Cisco, Huawei and Dell switches, access points and firewalls, Apache, DHCP and TFTP servers on Linux, and diagnostics and pen testing with Wireshark, Nmap and Ettercap. He also did Palo Alto Networks Firewall Essentials (EDU-210) training with Trainocate in October 2026.",
+      "Yes. Since April 2025 he's a part-time System Engineer at Ideabase Technologies, on site at Sunway University: campus network infrastructure, monitoring, deploying switches, access points and firewalls, troubleshooting and documentation. Before that he was a Network Infrastructure Intern at Sunway (Jan to Mar 2025): Cisco, Huawei and Dell switches, access points and firewalls, Apache, DHCP and TFTP servers on Linux, and diagnostics and pen testing with Wireshark, Nmap and Ettercap. His Palo Alto Networks Firewall Essentials (EDU-210) certificate of completion was issued in September 2026.",
   },
   {
     id: "what-has-he-built",
     question: "What has Ki Hurn built?",
     keywords: ["built", "build", "projects", "project", "made", "portfolio", "work", "shipped"],
     answer:
-      "Otto (a Windows desktop assistant, in development), C0RE (a private AI gateway for his PC, written in Rust), Billy (an AI bill splitter), V4ULT (a self-hosted personal data engine, in progress), Elysium (ticketing for Taylor's Orientation Party 2026) and SecureFin (a zero-trust finance portal with face verification). The Lab has all of it.",
+      "His projects include Elysium (event ticketing), SecureFin (a finance portal with face verification), C0RE (a self-hosted AI gateway), and Moby (an Android desk controller). Otto and V4ULT are in development, and Remy is a baking app concept. The Lab has the full project index.",
   },
   {
     id: "elysium",

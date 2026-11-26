@@ -8,8 +8,8 @@ export const news: NewsItem[] = [
     href: "/changelog",
   },
   {
-    date: "2026-10",
-    title: "Palo Alto Networks Firewall Essentials (EDU-210) training",
+    date: "2026-09",
+    title: "Earned the Palo Alto Networks Firewall Essentials (EDU-210) certificate of completion",
     category: "Cert",
     href: "/about",
   },
@@ -20,8 +20,8 @@ export const news: NewsItem[] = [
     href: "/gigs",
   },
   {
-    date: "2026-08",
-    title: "Launched Elysium registration & k6-tested check-in for 1,800 attendees",
+    date: "2026-09",
+    title: "Launched Elysium ticketing with 1,800 registrations and about 1,200 check-ins",
     category: "Project",
     href: "/lab/elysium",
   },

@@ -1,5 +1,5 @@
 export type Lens = "networking" | "fullstack" | "ai" | "security";
-export type Status = "building" | "paused" | "done" | "internal";
+export type Status = "building" | "paused" | "done" | "internal" | "concept";
 
 export interface Project {
   slug: string;
@@ -22,7 +22,7 @@ export interface Project {
 }
 
 export interface NowLine {
-  label: "Building" | "Working" | "Studying" | "Learning";
+  label: "Building" | "Working" | "Studying" | "Seeking";
   text: string;
   since?: string;
 }

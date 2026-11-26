@@ -20,26 +20,27 @@ export const timeline: TimelineEntry[] = [
     title: "Director of Strategic Communications",
     org: "Agents of Tech, Taylor's University",
     when: "Sep 2025 to present",
-    detail: "Hosted and marketed ImagineHack 2026, a hackathon with 250+ participants.",
+    detail: "Lead the club's communications, manage the PR and media marketing teams, and hosted and promoted ImagineHack 2026 for 250+ participants.",
   },
   {
     kind: "Community",
     title: "Senior Member",
     org: "Taylor's Orientation Leaders",
     when: "Jul 2025 to present",
+    detail: "Co-built Elysium for Orientation Party 2026 and supported ticket pickup, wristband binding and gate check-in.",
   },
   {
     kind: "Training",
     title: "Palo Alto Networks Firewall Essentials: Configuration and Management (EDU-210)",
-    org: "Trainocate",
-    when: "Oct 2026",
+    org: "Palo Alto Networks",
+    when: "Sep 2026",
   },
   {
     kind: "Education",
     title: "Bachelor of Computer Science (Honours)",
     org: "Taylor's University",
     when: "Apr 2025 to Sep 2027 (expected)",
-    detail: "Focus on Artificial Intelligence and Cybersecurity. CGPA 3.63.",
+    detail: "Specialising in Artificial Intelligence with an extension in Cybersecurity.",
   },
   {
     kind: "Work",
@@ -64,9 +65,9 @@ export interface SkillGroup {
 }
 
 export const skillGroups: SkillGroup[] = [
-  { heading: "Languages", items: ["TypeScript", "Python", "Rust"] },
-  { heading: "Web", items: ["React", "Vite", "Tailwind CSS", "Vercel"] },
-  { heading: "Data", items: ["PostgreSQL", "Supabase", "PocketBase"] },
+  { heading: "Languages", items: ["TypeScript", "Python", "Rust", "Java", "Swift", "PHP"] },
+  { heading: "Web", items: ["React", "React Native", "Node.js", "Vite", "Tailwind CSS", "Vercel"] },
+  { heading: "Data", items: ["PostgreSQL", "Supabase", "PocketBase", "MySQL"] },
   {
     heading: "Systems & Networking",
     items: [

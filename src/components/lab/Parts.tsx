@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { site } from "@/content/site";
 import type { Project } from "@/content/types";
 import { LabMiniStage } from "./LabMiniStage";
 import { OptionalPhoto } from "@/components/media/OptionalPhoto";
@@ -40,12 +41,12 @@ export function ChatPath() {
 
 export function BookCard() {
   return (
-    <a className="book" href="https://kihurn-book.vercel.app">
+    <a className="book" href={site.bookSource}>
       <span className="book__k text-mono-meta">Scrapbook</span>
       <span className="book__t text-display">The 3D book</span>
-      <span className="book__d text-body">My old portfolio, a book you can flip through. Best on desktop.</span>
+      <span className="book__d text-body">Source code and setup instructions for my earlier WebGL portfolio.</span>
       <span className="book__go text-nav" aria-hidden="true">
-        Open ↗
+        GitHub ↗
       </span>
     </a>
   );
@@ -80,6 +81,8 @@ export function ShotSlot({
 
 export function ProjectLinks({ p }: { p: Project }) {
   const internal = p.status === "internal";
+  if (!p.repo && !p.live && !internal && !p.caseStudy) return null;
+
   return (
     <ul className="plinks">
       {p.repo ? (
@@ -88,9 +91,7 @@ export function ProjectLinks({ p }: { p: Project }) {
             GitHub: {p.repo}
           </a>
         </li>
-      ) : internal ? null : (
-        <li className="text-meta">GitHub: TODO: no public repo link yet</li>
-      )}
+      ) : null}
       {p.live ? (
         <li>
           <a href={p.live} target="_blank" rel="noopener noreferrer">

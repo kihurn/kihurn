@@ -30,11 +30,11 @@ function wheelItems(ps: Project[]): WheelItem[] {
     name: p.name,
     tag: projectTag(p),
     lens: LENS_LABEL[p.lenses[0]] ?? "",
-    role: p.teamPart ? "LEAD / TEAM" : "SOLO BUILD",
-    year: p.finishedOn && /^\d{4}/.test(p.finishedOn) ? p.finishedOn.slice(0, 4) : "2026",
+    role: p.teamPart ? "TEAM PROJECT" : undefined,
+    year: p.finishedOn?.slice(0, 4),
     href: projectHref(p),
     photo: p.status === "internal" ? undefined : availableMedia(media.projects[p.slug]),
-    plate: `/placeholder/plate-${p.slug}.svg`,
+    plate: availableMedia(`/placeholder/plate-${p.slug}.svg`),
   }));
 }
 

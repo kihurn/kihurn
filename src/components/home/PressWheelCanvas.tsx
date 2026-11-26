@@ -97,7 +97,7 @@ function buildEmblemTexture(item: WheelItem, index: number): THREE.CanvasTexture
     paintIconEmblemCanvas(canvas, item, index, img);
     map.needsUpdate = true;
   };
-  img.src = item.plate;
+  if (item.plate) img.src = item.plate;
 
   return map;
 }
