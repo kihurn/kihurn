@@ -5,12 +5,27 @@ const hydrated = (page: Page) =>
   page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
 
 test.describe("About", () => {
-  test("timeline names the school, the employer and the university", async ({ page }) => {
+  test("experience, education and certifications are listed separately", async ({ page }) => {
     await page.goto("/about");
-    const timeline = page.locator("[data-timeline]");
-    await expect(timeline).toContainText("Taylor's University");
-    await expect(timeline).toContainText("Ideabase Technologies");
-    await expect(timeline).toContainText("Sunway University");
+    const experience = page.getByRole("region", { name: "Experience" });
+    await expect(experience.getByRole("listitem")).toHaveCount(7);
+    await expect(experience).toContainText("Ideabase Technologies");
+    await expect(experience).toContainText("Sunway University");
+    await expect(experience).toContainText("Taylor's College Student Council");
+
+    const education = page.getByRole("region", { name: "Education" });
+    await expect(education.getByRole("listitem")).toHaveCount(3);
+    await expect(education).toContainText("Taylor's University");
+    await expect(education).toContainText("Beaconhouse Sri Lethia Private National School");
+
+    const certifications = page.getByRole("region", { name: "Certifications" });
+    await expect(certifications.getByRole("heading", { name: /EDU-210/ })).toBeVisible();
+    await expect(certifications).toContainText("16 Oct 2026");
+    const certificate = certifications.getByRole("img", { name: /EDU-210 certificate/ });
+    await certificate.scrollIntoViewIfNeeded();
+    await expect.poll(() => certificate.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1286);
+    await expect(certifications.getByRole("link", { name: /view full-size certificate/i }))
+      .toHaveAttribute("href", "/images/certifications/edu-210.png");
   });
 
   test("skills are grouped under the five headings", async ({ page }) => {

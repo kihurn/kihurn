@@ -71,7 +71,7 @@ export function AboutBoard() {
                   className="ov3__imprint"
                   type="button"
                   data-dialog-open="onfile"
-                  aria-label="On file: training and community"
+                  aria-label="On file: certifications and community"
                   aria-haspopup="dialog"
                   aria-expanded="false"
                   title="On file"

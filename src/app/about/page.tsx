@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import "../../styles/home.css";
 import "../../styles/about-board.css";
@@ -6,7 +7,7 @@ import "../../styles/pages.css";
 import { AboutBehaviors } from "@/components/about/AboutBehaviors";
 import { AboutBoard } from "@/components/about/AboutBoard";
 import { AboutDialogs } from "@/components/about/AboutDialogs";
-import { skillGroups, spokenLanguages, timeline } from "@/content/about";
+import { education, experience, firewallCertificate, skillGroups, spokenLanguages } from "@/content/about";
 import { now } from "@/content/now";
 
 export const metadata: Metadata = {
@@ -15,6 +16,11 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 3600;
+
+const profileSections = [
+  { id: "experience", title: "Experience", entries: experience },
+  { id: "education", title: "Education", entries: education },
+];
 
 export default function AboutPage() {
   return (
@@ -39,23 +45,47 @@ export default function AboutPage() {
           </ul>
         </section>
 
-        <section className="page__sec" aria-labelledby="timeline-h">
-          <h2 id="timeline-h" className="page__title text-label">
-            Timeline
-          </h2>
-          <ol className="timeline" data-timeline>
-            {timeline.map((t) => (
-              <li key={`${t.title}-${t.when}`} className="timeline__row">
-                <span className="timeline__when text-mono-meta">{t.when}</span>
-                <div className="timeline__main">
-                  <p className="timeline__kind text-meta">{t.kind}</p>
-                  <h3 className="timeline__title">{t.title}</h3>
-                  <p className="timeline__org text-body">{t.org}</p>
-                  {t.detail ? <p className="timeline__detail text-body">{t.detail}</p> : null}
-                </div>
-              </li>
-            ))}
-          </ol>
+        {profileSections.map(({ id, title, entries }) => (
+          <section key={id} id={id} className="page__sec" aria-labelledby={`${id}-h`}>
+            <h2 id={`${id}-h`} className="page__title text-label">{title}</h2>
+            <ol className="timeline">
+              {entries.map((entry) => (
+                <li key={entry.title} className="timeline__row">
+                  <span className="timeline__when text-mono-meta">{entry.when}</span>
+                  <div className="timeline__main">
+                    <h3 className="timeline__title">{entry.title}</h3>
+                    <p className="timeline__org text-body">{entry.org}</p>
+                    <p className="timeline__detail text-body">{entry.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        ))}
+
+        <section id="certifications" className="page__sec" aria-labelledby="certifications-h">
+          <h2 id="certifications-h" className="page__title text-label">Certifications</h2>
+          <div className="timeline">
+            <article className="timeline__row">
+              <time className="timeline__when text-mono-meta" dateTime={firewallCertificate.date}>
+                {firewallCertificate.issued}
+              </time>
+              <div className="timeline__main">
+                <h3 className="timeline__title">{firewallCertificate.title}</h3>
+                <p className="timeline__org text-body">{firewallCertificate.issuer} · Certificate of Completion · 40 hours</p>
+                <a className="about__certificate" href={firewallCertificate.image} target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src={firewallCertificate.image}
+                    alt="EDU-210 certificate awarded to Ki Hurn Wong"
+                    width={1286}
+                    height={909}
+                    unoptimized
+                  />
+                  <span className="text-mono-meta">View full-size certificate ↗</span>
+                </a>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section className="page__sec" aria-labelledby="skills-h">

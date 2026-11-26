@@ -40,7 +40,7 @@ export const faq: FaqEntry[] = [
     question: "Does he have networking experience?",
     keywords: ["networking", "network", "networks", "cisco", "switch", "switches", "firewall", "firewalls", "sunway", "ideabase", "infrastructure"],
     answer:
-      "Yes. Since April 2025 he's a part-time System Engineer at Ideabase Technologies, on site at Sunway University: campus network infrastructure, monitoring, deploying switches, access points and firewalls, troubleshooting and documentation. Before that he was a Network Infrastructure Intern at Sunway (Jan to Mar 2025): Cisco, Huawei and Dell switches, access points and firewalls, Apache, DHCP and TFTP servers on Linux, and diagnostics and pen testing with Wireshark, Nmap and Ettercap. His Palo Alto Networks Firewall Essentials (EDU-210) certificate of completion was issued in September 2026.",
+      "Yes. Since April 2025 he's a part-time System Engineer at Ideabase Technologies, on site at Sunway University: campus network infrastructure, monitoring, deploying switches, access points and firewalls, troubleshooting and documentation. Before that he was a Network Infrastructure Intern at Sunway (Jan to Mar 2025): Cisco, Huawei and Dell switches, access points and firewalls, Apache, DHCP and TFTP servers on Linux, and diagnostics and pen testing with Wireshark, Nmap and Ettercap. His Palo Alto Networks Firewall Essentials (EDU-210) certificate is dated 16 October 2026.",
   },
   {
     id: "what-has-he-built",

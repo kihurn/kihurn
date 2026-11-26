@@ -8,10 +8,10 @@ export const news: NewsItem[] = [
     href: "/changelog",
   },
   {
-    date: "2026-09",
+    date: "2026-10-16",
     title: "Earned the Palo Alto Networks Firewall Essentials (EDU-210) certificate of completion",
     category: "Cert",
-    href: "/about",
+    href: "/about#certifications",
   },
   {
     date: "2026-09",

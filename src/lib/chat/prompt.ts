@@ -1,14 +1,15 @@
 import { site } from "@/content/site";
 import { projects } from "@/content/projects";
 import { now } from "@/content/now";
-import { timeline, skillGroups, spokenLanguages } from "@/content/about";
+import { education, experience, firewallCertificate, skillGroups, spokenLanguages } from "@/content/about";
 
 export function buildSystemPrompt(): string {
   const proj = projects
     .map((p) => `- ${p.name} (${p.status}): ${p.summary} Stack: ${p.stack.join(", ")}.`)
     .join("\n");
   const nowLines = now.map((n) => `- ${n.label}: ${n.text}`).join("\n");
-  const tl = timeline.map((t) => `- ${t.when}: ${t.title}, ${t.org}`).join("\n");
+  const roles = experience.map((entry) => `- ${entry.when}: ${entry.title}, ${entry.org}`).join("\n");
+  const studies = education.map((entry) => `- ${entry.when}: ${entry.title}, ${entry.org}`).join("\n");
   const skills = skillGroups.map((g) => `- ${g.heading}: ${g.items.join(", ")}`).join("\n");
 
   return `You are the assistant on ${site.name}'s portfolio website (${site.wordmark}).
@@ -27,8 +28,14 @@ ${proj}
 Right now:
 ${nowLines}
 
-Timeline:
-${tl}
+Experience:
+${roles}
+
+Education:
+${studies}
+
+Certification:
+- ${firewallCertificate.issued}: ${firewallCertificate.title}, ${firewallCertificate.issuer}
 
 Skills:
 ${skills}
