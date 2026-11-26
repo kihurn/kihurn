@@ -22,6 +22,7 @@ export function getMonogramPrefix(pathname: string): string {
   if (pathname.startsWith("/lab")) return "Lab";
   if (pathname.startsWith("/writing")) return "Writing";
   if (pathname.startsWith("/studio")) return "Studio";
+  if (pathname.startsWith("/systems")) return "KHSystems";
   if (pathname.startsWith("/contact")) return "Contact";
   if (pathname.startsWith("/changelog")) return "Changelog";
   if (pathname.startsWith("/gigs")) return "Gigs";

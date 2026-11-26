@@ -6,7 +6,7 @@ const BASE = "https://kihurn.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date(site.updated);
-  const pages = ["", "/lab", "/about", "/gigs", "/contact"].map((p) => ({
+  const pages = ["", "/lab", "/about", "/gigs", "/systems", "/contact"].map((p) => ({
     url: `${BASE}${p}`,
     lastModified,
     changeFrequency: p === "" ? ("weekly" as const) : ("monthly" as const),

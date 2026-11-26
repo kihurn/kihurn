@@ -1,0 +1,33 @@
+.systems {
+  inline-size: min(100%, 76rem); margin-inline: auto; padding: clamp(8rem, 15vh, 10rem) var(--margin) 4rem;
+  display: flex; flex-direction: column; gap: clamp(2rem, 6vh, 4rem);
+}
+.systems__graph { display: grid; grid-template-columns: minmax(0, 2.5fr) minmax(14rem, 1fr); gap: 1rem; }
+.systems__graph .eco {
+  min-block-size: 25rem; border-radius: .45rem;
+  background: var(--grain-fiber), linear-gradient(90deg, var(--fill) 1px, transparent 1px) 0 0 / 33.333% 100%, var(--paper);
+}
+.systems__graph .eco__edges { opacity: 1; }
+.systems__edge { stroke: var(--ink-muted); stroke-width: 1; opacity: .48; vector-effect: non-scaling-stroke; }
+.systems__edge[data-related="true"] { stroke-dasharray: 5 6; }
+.systems__edge[data-connected="true"] { stroke: var(--ink); stroke-width: 1.6; opacity: .88; }
+.systems__graph .eco__node { inline-size: clamp(7.5rem, 26%, 12rem); border-radius: .35rem; border-color: var(--divider); }
+.systems__graph .eco__node--idle { opacity: 1; cursor: pointer; }
+.systems__graph .eco__node[aria-pressed="true"] { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.systems__inspector {
+  min-inline-size: 0; padding: 1.25rem; border: 1px solid var(--divider); border-radius: .45rem;
+  display: flex; flex-direction: column; gap: .8rem; background: var(--grain-fiber), var(--surface);
+}
+.systems__inspector h3 { margin: 0; font-size: clamp(1.3rem, 2.5vw, 2rem); letter-spacing: -.025em; }
+.systems__inspector p { margin: 0; line-height: 1.5; font-size: .9rem; }
+.systems__inspector a { color: inherit; margin-block-start: auto; padding-block-start: .7rem; text-underline-offset: .22em; }
+.systems__legend { grid-column: 1 / -1; margin: 0; display: flex; flex-wrap: wrap; gap: 1rem; color: var(--ink-muted); }
+.systems #chat-path { scroll-margin-block-start: 8rem; }
+.systems .flow__step { background: var(--surface); min-inline-size: 0; }
+@media (width < 970px) {
+  .systems__graph { grid-template-columns: 1fr; }
+}
+@media (width < 768px) {
+  .systems__graph .eco { min-block-size: 0; }
+  .systems__graph .eco__node { inline-size: 100%; }
+}

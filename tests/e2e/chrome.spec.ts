@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const LABELS = ["Home", "Lab", "About", "Gigs", "Contact"];
+import { NAV, PALETTE_PAGES } from "../../src/components/chrome/nav";
 
 test("touch devices skip the opening loader and show the swipe hints", async ({ page, isMobile }) => {
   test.skip(!isMobile, "touch layout only");
@@ -25,11 +25,10 @@ test("wordmark reads KIHURN.", async ({ page }) => {
   await expect(page.locator("header .wordmark")).toHaveText("KIHURN.");
 });
 
-test("the five nav links resolve", async ({ page }) => {
+test("the site navigation links resolve", async ({ page }) => {
   await page.goto("/");
   const links = page.locator("footer nav a");
-  await expect(links).toHaveCount(5);
-  await expect(links).toHaveText(LABELS);
+  await expect(links).toHaveText(PALETTE_PAGES.map((page) => page.label));
   const hrefs = await links.evaluateAll((as) => as.map((a) => a.getAttribute("href")!));
   for (const href of hrefs) {
     const res = await page.goto(href);
@@ -37,7 +36,7 @@ test("the five nav links resolve", async ({ page }) => {
     await expect(page.locator("main h1")).toBeVisible();
   }
   const headerLinks = page.locator("header .navpill__link");
-  await expect(headerLinks).toHaveCount(5);
+  await expect(headerLinks).toHaveCount(NAV.length);
 });
 
 test("command palette opens as a dialog", async ({ page, isMobile }) => {

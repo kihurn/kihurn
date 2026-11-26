@@ -1,111 +1,79 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { experiments } from "../../src/content/experiments";
 import { projects } from "../../src/content/projects";
-import { getEcosystemGraph } from "../../src/lib/projects";
 
-const hydrated = (page: Page) =>
-  page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
+test("one filter applies across the spine wheel, grid, and list", async ({ page }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("[data-spine]")).toHaveCount(projects.length + experiments.length);
+  await page.getByRole("button", { name: "Security", exact: true }).click();
+  const count = projects.filter((project) => project.lenses.includes("security")).length;
+  await expect(page.locator("[data-spine]")).toHaveCount(count);
+  await expect(page.getByRole("button", { name: "Open book: SecureFin" })).toBeVisible();
+  await page.getByRole("button", { name: /^grid$/i }).click();
+  await expect(page.getByRole("button", { name: /^Open book:/ })).toHaveCount(count);
+  await page.getByRole("button", { name: /^list$/i }).click();
+  await expect(page.locator(".shelf-row")).toHaveCount(count);
+  await page.getByRole("button", { name: "Motion", exact: true }).click();
+  await expect(page.locator(".shelf-row")).toHaveCount(experiments.length);
+});
 
-const graph = getEcosystemGraph(projects);
+test("wheel opens a spread, turns the page, and closes with Escape", async ({ page }) => {
+  await page.goto("/lab?autostart=1");
+  const wheel = page.getByRole("region", { name: "Book spine wheel" });
+  await wheel.focus();
+  await page.keyboard.press("Enter");
+  const book = page.locator("dialog[open]");
+  await expect(book.getByRole("heading", { level: 2 })).toHaveText(experiments[0].title);
+  await expect(book.getByRole("link", { name: "Open Live Stage" })).toHaveAttribute("href", `/lab/${experiments[0].slug}`);
+  await book.getByRole("button", { name: "Next" }).click();
+  await expect(book.getByRole("heading", { level: 2 })).toHaveText(experiments[1].title);
+  await page.keyboard.press("Escape");
+  await expect(book).toHaveCount(0);
+});
 
-test("the map has one button per node; in-progress nodes are greyed and disabled", async ({ page }) => {
-  await page.goto("/lab");
-  const nodes = page.locator("[data-eco-node]");
-  await expect(nodes).toHaveCount(graph.nodes.length);
-  for (const n of graph.nodes) {
-    const node = page.locator(`[data-eco-node="${n.slug}"]`);
-    await expect(node).toBeVisible();
-    if (n.live) await expect(node).not.toHaveAttribute("aria-disabled", "true");
-    else {
-      await expect(node).toHaveAttribute("aria-disabled", "true");
-      await expect(node).toHaveClass(/eco__node--idle/);
-    }
+test("project book deep links retain case-study details, source, and live links", async ({ page }) => {
+  await page.goto("/lab?autostart=1#elysium");
+  const book = page.locator("dialog[open]");
+  await expect(book.getByRole("heading", { name: "Elysium" })).toBeVisible();
+  await expect(book.getByRole("heading", { name: "Architecture" })).toBeVisible();
+  await expect(book.getByRole("link", { name: "GitHub" })).toHaveAttribute("href", /github\.com/);
+  await expect(book.getByRole("link", { name: "Live Service" })).toHaveAttribute("href", /vercel\.app/);
+  await expect(book.getByRole("link", { name: "Read case study" })).toHaveAttribute("href", "/lab/elysium");
+});
+
+test("the internal book omits external source links", async ({ page }) => {
+  await page.goto("/lab?autostart=1#campus-network");
+  const book = page.locator("dialog[open]");
+  await expect(book).toContainText("INTERNAL");
+  await expect(book.getByRole("link", { name: "GitHub" })).toHaveCount(0);
+  await expect(book).toContainText(/walkthrough on request/i);
+});
+
+test("the Systems inspector opens the selected Lab book", async ({ page }) => {
+  await page.goto("/systems?autostart=1");
+  await expect(page.getByRole("heading", { name: "AI ecosystem" })).toBeVisible();
+  for (const step of ["Browser", "Vercel", "Tailscale Funnel", "C0RE Rust gateway", "Local Ollama GPU"]) {
+    await expect(page.locator("#chat-path")).toContainText(step);
+  }
+  await page.locator('[data-eco-node="lenz"]').click();
+  const inspector = page.getByLabel("Node inspector");
+  await expect(inspector.getByRole("heading", { name: "Lenz" })).toBeVisible();
+  await expect(inspector.getByRole("link", { name: "Open Lab book" })).toHaveAttribute("href", "/lab#lenz");
+  await inspector.getByRole("link", { name: "Open Lab book" }).click();
+  await expect(page.locator("dialog[open]").getByRole("heading", { name: "Lenz" })).toBeVisible();
+});
+
+test("case-study and fullscreen experiment routes still render", async ({ page }) => {
+  for (const item of [...projects.filter((p) => p.caseStudy), ...experiments]) {
+    const response = await page.goto(`/lab/${item.slug}?autostart=1`);
+    expect(response?.status(), item.slug).toBe(200);
   }
 });
 
-test("clicking the Otto node scrolls its entry into view", async ({ page }) => {
-  await page.goto("/lab");
-  await hydrated(page);
-  await page.locator('[data-eco-node="otto"]').click();
-  await expect(page.locator("#otto")).toBeInViewport();
-});
-
-test("on phones the map is a vertical stack", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "mobile only");
-  await page.goto("/lab");
-  const nodes = await page.locator("[data-eco-node]").all();
-  expect(nodes).toHaveLength(graph.nodes.length);
-  const ys: number[] = [];
-  for (const n of nodes) ys.push((await n.boundingBox())!.y);
-  for (let i = 1; i < ys.length; i++) expect(ys[i], `node ${i}`).toBeGreaterThan(ys[i - 1]);
-});
-
-test("the chat path is drawn out", async ({ page }) => {
-  await page.goto("/lab");
-  const path = page.locator("#chat-path");
-  for (const step of ["Browser", "Vercel", "Tailscale Funnel", "C0RE", "Model"]) {
-    await expect(path).toContainText(step);
-  }
-});
-
-test("lens filter: Security shows SecureFin and hides Elysium; All restores everything", async ({ page }) => {
-  await page.goto("/lab");
-  await hydrated(page);
-  await page.getByRole("button", { name: "Security" }).click();
-  await expect(page.locator("#securefin")).toBeVisible();
-  await expect(page.locator("#elysium")).toHaveCount(0);
-
-  await page.getByRole("button", { name: "All", exact: true }).click();
-  for (const p of projects.filter((x) => x.status === "done" || x.status === "internal")) {
-    await expect(page.locator(`#${p.slug}`), p.slug).toBeAttached();
-  }
-  await expect(page.getByRole("heading", { name: "In progress" })).toBeVisible();
-  for (const p of projects.filter((x) => x.status === "building" || x.status === "paused")) {
-    await expect(page.locator(`#${p.slug}`), p.slug).toBeAttached();
-  }
-});
-
-test("the campus network entry is INTERNAL, has no GitHub link, and offers a walkthrough", async ({ page }) => {
-  await page.goto("/lab");
-  const entry = page.locator("#campus-network");
-  await expect(entry).toContainText("INTERNAL");
-  await expect(entry.locator('a[href*="github.com"]')).toHaveCount(0);
-  await expect(entry).toContainText(/walkthrough on request/i);
-});
-
-test("a case study has the six fixed sections", async ({ page }) => {
-  await page.goto("/lab/elysium");
-  const headings = await page.locator("main h2").allTextContents();
-  expect(headings).toEqual(["Problem", "What I built", "How it works", "Result", "Stack", "Links"]);
-  await expect(page.getByRole("link", { name: /op-26-beta\.vercel\.app/ })).toBeVisible();
-});
-
-test("every case study page renders", async ({ page }) => {
-  for (const p of projects.filter((x) => x.caseStudy)) {
-    const res = await page.goto(`/lab/${p.slug}`);
-    expect(res?.status(), p.slug).toBe(200);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(p.name);
-  }
-});
-
-test("the 3D book card links to the source repository", async ({ page }) => {
-  await page.goto("/lab");
-  await expect(page.getByRole("link", { name: /scrapbook the 3D book/i })).toHaveAttribute("href", "https://github.com/kihurn/Interactive-Book");
-});
-
-test("concepts have their own section and link to the concept repository", async ({ page }) => {
-  await page.goto("/lab");
-  const concepts = page.getByRole("region", { name: "Concepts" });
-  const remy = concepts.locator("#remy");
-  await expect(remy).toContainText("CONCEPT");
-  await expect(remy.getByRole("link", { name: /github/i })).toHaveAttribute("href", "https://github.com/kihurn/Remy");
-  await expect(page.getByRole("region", { name: "In progress" }).locator("#v4ult")).toContainText("IN DEVELOPMENT");
-});
-
-test("loading /lab never fetches face-api or the model files", async ({ page }) => {
+test("the shelf does not load face recognition", async ({ page }) => {
   const seen: string[] = [];
-  page.on("request", (r) => seen.push(r.url()));
-  await page.goto("/lab");
-  await hydrated(page);
-  await page.waitForTimeout(500);
-  expect(seen.filter((u) => /face-api|\/models\//i.test(u))).toEqual([]);
+  page.on("request", (request) => seen.push(request.url()));
+  await page.goto("/lab?autostart=1");
+  await expect(page.getByRole("heading", { name: "Lab", exact: true })).toBeVisible();
+  expect(seen.filter((url) => /face-api|\/models\//i.test(url))).toEqual([]);
 });

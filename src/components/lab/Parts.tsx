@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { site } from "@/content/site";
 import type { Project } from "@/content/types";
 import { LabMiniStage } from "./LabMiniStage";
 import { OptionalPhoto } from "@/components/media/OptionalPhoto";
@@ -20,10 +19,10 @@ export function Flow({ steps, label }: { steps: string[]; label: string }) {
 export function ChatPath() {
   const steps = [
     "Browser: you type a question",
-    "Vercel: checks length, rate-limits you, holds the key",
-    "Tailscale Funnel: one public path, nothing else exposed",
-    "C0RE: Ki Hurn's gateway, with its own key and limits",
-    "Model: runs on his PC and answers",
+    "Vercel: validates the request, rate-limits traffic and holds the key",
+    "Tailscale Funnel: forwards the public request to the gateway",
+    "C0RE Rust gateway: checks the project key and applies model and usage limits",
+    "Local Ollama GPU: runs the model on my PC and returns the answer",
   ];
   return (
     <section id="chat-path" className="lab-sec" aria-labelledby="chat-path-h">
@@ -36,19 +35,6 @@ export function ChatPath() {
         questions still answer from a script.
       </p>
     </section>
-  );
-}
-
-export function BookCard() {
-  return (
-    <a className="book" href={site.bookSource}>
-      <span className="book__k text-mono-meta">Scrapbook</span>
-      <span className="book__t text-display">The 3D book</span>
-      <span className="book__d text-body">Source code and setup instructions for my earlier WebGL portfolio.</span>
-      <span className="book__go text-nav" aria-hidden="true">
-        GitHub ↗
-      </span>
-    </a>
   );
 }
 
