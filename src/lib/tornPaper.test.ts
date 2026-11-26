@@ -25,3 +25,20 @@ test("computeTornWipeOffsets sweeps from bottom to top in two phases", () => {
   assert.equal(end.topEdgeY, -40);
   assert.equal(end.bottomEdgeY, -40);
 });
+
+test("both wipe passes accelerate, slow down and flatten at the viewport edges", () => {
+  const height = 900;
+  for (const phase of [0, .5]) {
+    const first = computeTornWipeOffsets(phase + .125, height, 12);
+    const middle = computeTornWipeOffsets(phase + .25, height, 12);
+    const last = computeTornWipeOffsets(phase + .375, height, 12);
+    const boundary = phase === 0 ? "topEdgeY" : "bottomEdgeY";
+    assert.ok(first[boundary] > height * .8);
+    assert.equal(middle[boundary], height / 2);
+    assert.ok(last[boundary] < height * .2);
+    assert.equal(computeTornWipeOffsets(phase, height, 12).edgeStrength, 0);
+    assert.equal(middle.edgeStrength, 1);
+    assert.ok(first.edgeStrength < .12 && last.edgeStrength < .12);
+    assert.equal(computeTornWipeOffsets(phase + .5, height, 12).edgeStrength, 0);
+  }
+});

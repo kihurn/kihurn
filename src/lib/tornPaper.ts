@@ -30,22 +30,17 @@ export function generateTornEdgePoints(
 export function computeTornWipeOffsets(progress: number, height: number, pad = 48): {
   topEdgeY: number;
   bottomEdgeY: number;
+  edgeStrength: number;
 } {
   const p = Math.max(0, Math.min(1, progress));
-  const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-  const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-
-  if (p <= 0.5) {
-    const k = easeOut(p / 0.5);
-    return {
-      topEdgeY: (height + pad) * (1 - k) - pad * k,
-      bottomEdgeY: height + pad,
-    };
-  }
-
-  const k = easeInOut((p - 0.5) / 0.5);
+  const covering = p <= .5;
+  const phase = covering ? p * 2 : (p - .5) * 2;
+  const eased = phase < .5 ? 4 * phase ** 3 : 1 - (-2 * phase + 2) ** 3 / 2;
+  const movingEdge = height + pad - (height + pad * 2) * eased;
+  const visibleTravel = Math.max(0, Math.min(1, 1 - movingEdge / Math.max(1, height)));
   return {
-    topEdgeY: -pad,
-    bottomEdgeY: (height + pad) * (1 - k) - pad * k,
+    topEdgeY: covering ? movingEdge : -pad,
+    bottomEdgeY: covering ? height + pad : movingEdge,
+    edgeStrength: (4 * visibleTravel * (1 - visibleTravel)) ** 2,
   };
 }

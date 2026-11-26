@@ -48,12 +48,14 @@ export function RouteTransition() {
     resize();
     window.addEventListener("resize", resize);
 
-    const drawTornBand = (paperProgress: number, inkProgress: number, seed: number) => {
+    const drawTornBand = (progress: number, seed: number) => {
       ctx.clearRect(0, 0, width, height);
+      if (progress <= 0 || progress >= 1) return;
       const isLight = document.documentElement.dataset.theme === "light";
-      const lip = Math.min(32, Math.max(14, width * .026));
+      const lip = Math.min(44, Math.max(20, width * .032));
+      const { topEdgeY, bottomEdgeY, edgeStrength } = computeTornWipeOffsets(progress, height, 12);
       if (!edges || edges.width !== width || edges.seed !== seed) {
-        const amplitude = Math.min(24, width * .033);
+        const amplitude = lip * .55;
         edges = {
           width, seed,
           paper: {
@@ -67,26 +69,24 @@ export function RouteTransition() {
         };
       }
 
-      const paintSheet = (progress: number, { top, bottom }: SheetEdges, color: string, inset: number) => {
-        if (progress <= 0 || progress >= 1) return;
-        const { topEdgeY, bottomEdgeY } = computeTornWipeOffsets(progress, height, 78);
+      const paintSheet = ({ top, bottom }: SheetEdges, color: string, inset: number) => {
         ctx.beginPath();
         top.forEach(({ x, y }, i) => {
-          const edge = topEdgeY + y + inset;
+          const edge = topEdgeY + (y + inset) * edgeStrength;
           if (i === 0) ctx.moveTo(x, edge);
           else ctx.lineTo(x, edge);
         });
         for (let i = bottom.length - 1; i >= 0; i--) {
           const { x, y } = bottom[i];
-          ctx.lineTo(x, bottomEdgeY + y - inset);
+          ctx.lineTo(x, bottomEdgeY + (y - inset) * edgeStrength);
         }
         ctx.closePath();
         ctx.fillStyle = color;
         ctx.fill();
       };
 
-      paintSheet(paperProgress, edges.paper, isLight ? "#383633" : "#eae9e5", 0);
-      paintSheet(inkProgress, edges.ink, isLight ? "#e4e1db" : "#151515", lip);
+      paintSheet(edges.paper, isLight ? "#383633" : "#eae9e5", 0);
+      paintSheet(edges.ink, isLight ? "#e4e1db" : "#151515", lip);
     };
 
     const runTransition = (href: string) => {
@@ -107,18 +107,15 @@ export function RouteTransition() {
       router.prefetch(href);
       const seed = (performance.now() % 100) * 0.13 + 1.2;
 
-      const coverDur = 420;
-      const revealDur = 500;
+      const coverDur = 550;
+      const revealDur = 650;
       const t0 = performance.now();
 
       const animateReveal = () => {
         const rStart = performance.now();
         const stepReveal = (now: number) => {
-          const elapsed = now - rStart;
-          const k = Math.min(1, elapsed / revealDur);
-          const paper = Math.max(0, Math.min(1, (elapsed - 44) / (revealDur - 44)));
-          const ink = Math.min(1, elapsed / (revealDur - 28));
-          drawTornBand(.5 + paper * .5, .5 + ink * .5, seed);
+          const k = Math.min(1, (now - rStart) / revealDur);
+          drawTornBand(.5 + k * .5, seed);
           if (k < 1) {
             activeRafRef.current = requestAnimationFrame(stepReveal);
           } else {
@@ -129,11 +126,8 @@ export function RouteTransition() {
       };
 
       const stepCover = (now: number) => {
-        const elapsed = now - t0;
-        const k = Math.min(1, elapsed / coverDur);
-        const paper = Math.min(1, elapsed / (coverDur - 32));
-        const ink = Math.max(0, Math.min(1, (elapsed - 36) / (coverDur - 36)));
-        drawTornBand(paper * .5, ink * .5, seed);
+        const k = Math.min(1, (now - t0) / coverDur);
+        drawTornBand(k * .5, seed);
         if (k < 1) {
           activeRafRef.current = requestAnimationFrame(stepCover);
         } else {
