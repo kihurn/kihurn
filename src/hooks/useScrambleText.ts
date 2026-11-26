@@ -9,6 +9,7 @@ export interface UseScrambleTextOptions {
   glyphs?: string;
   animateOnMount?: boolean;
   refreshKey?: number;
+  refreshDurationMs?: number;
   canRefresh?: () => boolean;
 }
 
@@ -22,6 +23,7 @@ export function useScrambleText(
     glyphs = DEFAULT_SCRAMBLE_GLYPHS,
     animateOnMount = false,
     refreshKey = 0,
+    refreshDurationMs = durationMs,
     canRefresh,
   } = options;
 
@@ -41,6 +43,8 @@ export function useScrambleText(
 
     if (skip) return;
 
+    const duration = Math.max(1, refreshing ? refreshDurationMs : durationMs);
+    const frameInterval = Math.max(16, intervalMs * (duration / Math.max(1, durationMs)));
     const start = performance.now();
     let raf = 0;
     let cancelled = false;
@@ -53,8 +57,8 @@ export function useScrambleText(
         return;
       }
       const elapsed = now - start;
-      const progress = Math.min(1, elapsed / Math.max(1, durationMs));
-      const tick = Math.floor(elapsed / Math.max(16, intervalMs));
+      const progress = Math.min(1, elapsed / duration);
+      const tick = Math.floor(elapsed / frameInterval);
 
       if (tick !== lastTick || progress >= 1) {
         lastTick = tick;
@@ -72,7 +76,7 @@ export function useScrambleText(
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [targetText, durationMs, intervalMs, glyphs, animateOnMount, refreshKey, canRefresh]);
+  }, [targetText, durationMs, intervalMs, glyphs, animateOnMount, refreshKey, refreshDurationMs, canRefresh]);
 
   return frame.target === targetText
     ? { displayText: frame.text, isScrambling: frame.running }

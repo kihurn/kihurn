@@ -200,7 +200,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     let lastRefresh = 0;
     const idleTimer = window.setInterval(() => {
       const now = performance.now();
-      if (canRefresh() && now - Math.max(lastRefresh, lastInput.current) >= 5000) {
+      if (canRefresh() && now - Math.max(lastRefresh, lastInput.current) >= 4500) {
         lastRefresh = now;
         setRefreshKey((key) => key + 1);
       }
@@ -358,7 +358,7 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
   }, [showList, N, items, canRefresh, changeFocus, beginOrbit]);
 
   const p = items[active];
-  const idle = { refreshKey, canRefresh };
+  const idle = { refreshKey, canRefresh, refreshDurationMs: 520 };
   const indexLabel = `N°${pad2(active + 1)} / ${pad2(N)}`;
   const { displayText: scrambledIndex } = useScrambleText(indexLabel, {
     durationMs: 320,
