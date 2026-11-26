@@ -4,7 +4,7 @@ import { forwardRef, useState } from "react";
 import Image from "next/image";
 import { TICKET_TYPES, type TicketType } from "@/lib/contact/validate";
 
-export type StubStatus = "writing" | "queued";
+export type StubStatus = "writing" | "dispatched";
 
 interface Props {
   ticketNo: string | null;
@@ -24,6 +24,7 @@ export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
   const [copied, setCopied] = useState(false);
   const label = TICKET_TYPES.find((t) => t.id === type)?.label ?? "";
   const excerpt = message.trim().slice(0, 72) + (message.trim().length > 72 ? "…" : "");
+  const dispatched = status === "dispatched";
 
   const copyId = async () => {
     if (!ticketNo) return;
@@ -38,7 +39,7 @@ export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
     <div ref={ref} className="stub" data-stub data-status={status} aria-label="Your ticket stub" role="group">
       <div className="stub__head">
         <span className="stub__counter text-mono-sm">INTAKE · COUNTER 01</span>
-        <span className="stub__badge text-mono-sm">{status === "queued" ? "FILED" : "DRAFT"}</span>
+        <span className="stub__badge text-mono-sm">{dispatched ? "DISPATCHED" : "DRAFT"}</span>
       </div>
 
       <div className="stub__no-row">
@@ -75,7 +76,7 @@ export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
         </div>
         <div>
           <dt>STATUS</dt>
-          <dd data-stub-status>{status === "queued" ? "IN QUEUE" : "BEING WRITTEN"}</dd>
+          <dd data-stub-status>{dispatched ? "DISPATCHED" : "BEING WRITTEN"}</dd>
         </div>
       </dl>
 
@@ -92,6 +93,7 @@ export const TicketStub = forwardRef<HTMLDivElement, Props>(function TicketStub(
         {Array.from({ length: 40 }, (_, index) => <i key={index} style={{ width: 1 + (index * 7 % 5) * 0.6 }} />)}
       </div>
       <p className="stub__foot text-mono-meta">ONE REPLY · MYT +08:00 · NO SPAM</p>
+      {dispatched && <span className="stub__seal text-mono-sm">SENT <span>· {date.slice(0, 6)}</span></span>}
     </div>
   );
 });

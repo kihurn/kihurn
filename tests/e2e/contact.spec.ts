@@ -2,6 +2,23 @@ import { expect, test, type Page } from "@playwright/test";
 
 const hydrated = (page: Page) => page.waitForFunction(() => document.documentElement.dataset.hydrated === "true");
 
+test("the stamp stays clear of the ticket and the phone layout centers it below the sheet", async ({ page }) => {
+  await page.goto("/contact?autostart=1");
+  await hydrated(page);
+  const sheet = (await page.locator(".letter-sheet").boundingBox())!;
+  const ticket = (await page.locator(".stub").boundingBox())!;
+  const stamp = (await page.locator(".postcard__stamp-paper").boundingBox())!;
+  expect(ticket.y).toBeGreaterThan(stamp.y + stamp.height);
+  expect(sheet.width).toBeLessThanOrEqual(620);
+  if (page.viewportSize()!.width < 768) {
+    expect(ticket.y).toBeGreaterThan(sheet.y + sheet.height);
+    expect(Math.abs(sheet.x + sheet.width / 2 - ticket.x - ticket.width / 2)).toBeLessThan(2);
+  } else {
+    expect(ticket.x).toBeLessThan(sheet.x + sheet.width);
+    expect(ticket.x + ticket.width).toBeGreaterThan(sheet.x + sheet.width);
+  }
+});
+
 test("the signature area opens the pad and allows editing the saved mark", async ({ page }) => {
   await page.goto("/contact?autostart=1");
   await hydrated(page);
@@ -36,30 +53,42 @@ test("typing a name updates the stub", async ({ page }) => {
   await expect(page.locator("[data-stub-type]")).toHaveText("FREELANCE");
 });
 
-test("an empty message shows the field error and moves focus to it", async ({ page }) => {
-  await page.route("**/api/contact", (route) =>
-    route.fulfill({ status: 400, json: { field: "message", error: "Write between 10 and 2000 characters." } }),
-  );
+test("an empty message shows the field error without launching or sending", async ({ page }) => {
+  let requests = 0;
+  await page.route("**/api/contact", (route) => {
+    requests++;
+    return route.abort();
+  });
   await page.goto("/contact");
   await hydrated(page);
   await page.getByLabel("Your name").fill("Ada");
   await page.getByLabel("Your email").fill("ada@example.com");
-  await page.getByRole("button", { name: "Send it" }).click();
+  await page.getByRole("button", { name: "Fold & send" }).click();
   await expect(page.locator(".ticket").getByRole("alert")).toContainText("Write between 10 and 2000");
   await expect(page.getByLabel("Message")).toBeFocused();
+  await expect(page.locator(".ticket")).toHaveAttribute("data-state", "writing");
+  expect(requests).toBe(0);
 });
 
-test("a successful send shows IN QUEUE and the download button", async ({ page }) => {
+test("a successful send folds the sheet, leaves a stamped receipt and starts a fresh draft on request", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.route("**/api/contact", (route) => route.fulfill({ status: 200, json: { ticketNo: "KH-261124-ABCD" } }));
   await page.goto("/contact");
   await hydrated(page);
   await page.getByLabel("Your name").fill("Ada");
   await page.getByLabel("Your email").fill("ada@example.com");
   await page.getByLabel("Message").fill("Hello Ki Hurn, this is a test ticket.");
-  await page.getByRole("button", { name: "Send it" }).click();
-  await expect(page.locator("[data-stub-status]")).toHaveText("IN QUEUE");
+  await page.getByRole("button", { name: "Fold & send" }).click();
+  await expect(page.locator(".ticket")).toHaveAttribute("data-state", "folding");
+  await expect(page.locator("[data-stub-status]")).toHaveText("DISPATCHED");
   await expect(page.locator("[data-stub-no]")).toHaveText("KH-261124-ABCD");
+  await expect(page.locator(".stub__seal")).toHaveText(/SENT · \d{2} [A-Z]{3}/);
+  await expect(page.locator(".letter-sheet")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Download your stub" })).toBeVisible();
+  await page.getByRole("button", { name: "Write another letter" }).click();
+  await expect(page.getByLabel("Your name")).toBeFocused();
+  await expect(page.getByLabel("Your name")).toBeEmpty();
+  await expect(page.locator("[data-stub-status]")).toHaveText("BEING WRITTEN");
 });
 
 test("a failed send shows the direct email fallback", async ({ page }) => {
@@ -71,8 +100,9 @@ test("a failed send shows the direct email fallback", async ({ page }) => {
   await page.getByLabel("Your name").fill("Ada");
   await page.getByLabel("Your email").fill("ada@example.com");
   await page.getByLabel("Message").fill("Hello Ki Hurn, this is a test ticket.");
-  await page.getByRole("button", { name: "Send it" }).click();
+  await page.getByRole("button", { name: "Fold & send" }).click();
   await expect(page.locator(".ticket").getByRole("alert")).toContainText("wongkihurn2005@gmail.com");
+  await expect(page.getByLabel("Message")).toHaveValue("Hello Ki Hurn, this is a test ticket.");
 });
 
 test("the honeypot is hidden from people and tab order", async ({ page }) => {

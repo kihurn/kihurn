@@ -161,12 +161,6 @@ export function SignaturePad({ value, onChange, disabled = false }: SignaturePad
 
   return (
     <div className="sigline">
-      <div className="sigline__head">
-        <span className="text-mono-sm sigline__status" aria-live="polite">
-          {value ? "SIG::CAPTURED" : "SIG::OPTIONAL"}
-        </span>
-      </div>
-
       <button
         type="button"
         className="sigline__trigger text-mono-meta"
