@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { site } from "@/content/site";
 import { getThemeMetaColor, normalizeThemeMode, resolveThemeMode, type ThemeMode } from "@/lib/chrome";
-import { dispatchTornNavigate } from "./RouteTransition";
+import { dispatchTornNavigate } from "./PageTransitionWipe";
 import { dispatchThemeBurst } from "./GlobalDotField";
 
 type VTDocument = Document & { startViewTransition?: (cb: () => Promise<void> | void) => unknown };
@@ -70,12 +70,7 @@ function splitRoll(el: HTMLElement) {
 
 export function ChromeBehaviors() {
   const pathname = usePathname();
-  const settle = useRef<(() => void) | null>(null);
-
   useEffect(() => {
-    settle.current?.();
-    settle.current = null;
-    document.documentElement.classList.remove("is-routing");
     document.querySelectorAll<HTMLElement>("[data-roll]").forEach(splitRoll);
   }, [pathname]);
 

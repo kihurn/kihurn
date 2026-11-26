@@ -120,7 +120,6 @@ html[data-telemetry="hidden"] .statusbar {
   .cmd__panel { max-inline-size: none; border-radius: var(--r-2xl) var(--r-2xl) 0 0; max-block-size: 80vh; }
 }
 
-html.is-routing main { opacity: 0; transition: opacity 0.2s linear; }
 ::view-transition-old(root),
 ::view-transition-new(root) { animation-duration: 0.28s; }
 
@@ -422,16 +421,31 @@ html:not([data-preloader="active"]) .preloader {
   .preloader__track-wrap { width: 28vw; }
 }
 
-.torn-transition {
+.page-transition-wipe {
+  --wipe-paper: #d6d6d5;
+  --wipe-base: #1e1e1e;
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 1450;
+  display: none;
+  overflow: hidden;
   pointer-events: none;
-  display: block;
-  opacity: 0;
 }
-.torn-transition.is-active {
-  opacity: 1;
+:root[data-theme="light"] .page-transition-wipe {
+  --wipe-paper: #1e1e1e;
+  --wipe-base: #d6d6d5;
+}
+.page-transition-wipe[data-phase] {
+  display: block;
+  pointer-events: auto;
+}
+.page-transition-wipe path:first-child { fill: var(--wipe-paper); }
+.page-transition-wipe path:last-child { fill: var(--wipe-base); }
+.page-transition-wipe:is([data-phase="cover"], [data-phase="reveal"]) path:last-child {
+  stroke: #0005;
+  stroke-width: 1px;
 }
 
 .theme-burst {
@@ -449,5 +463,4 @@ html:not([data-preloader="active"]) .preloader {
     animation: none !important;
   }
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*) { animation: none !important; }
-  html.is-routing main { transition: none !important; }
 }
