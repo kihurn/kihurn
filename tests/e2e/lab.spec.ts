@@ -106,6 +106,36 @@ test("Grid and List open directly into the hinged spread", async ({ page }) => {
   }
 });
 
+test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page, isMobile }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
+  for (const mode of ["wheel", "grid"]) {
+    if (mode === "grid") await page.getByRole("button", { name: /^grid$/i }).click();
+    const cover = page.getByRole("button", { name: `Open book: ${experiments[0].title}` });
+    const front = cover.locator(".shelf-cover__front");
+    const inner = cover.locator(".shelf-cover__page");
+    await expect(front).toBeVisible();
+    await expect(inner).toContainText("Overview");
+    await cover.hover();
+    if (isMobile) {
+      await expect(inner).toBeHidden();
+      await expect(front).toHaveCSS("transform", "none");
+    } else {
+      await expect.poll(() => front.evaluate((node) => {
+        const transform = getComputedStyle(node).transform;
+        return transform === "none" ? 0 : Math.round(new DOMMatrixReadOnly(transform).m13 * 1000);
+      })).toBe(469);
+      await expect(cover).toHaveCSS("perspective", "1200px");
+      await expect(cover).toHaveCSS("transform", "none");
+    }
+    await cover.click();
+    const spread = page.locator("dialog[open]");
+    await expect(spread.getByRole("heading", { level: 2 })).toHaveText(experiments[0].title);
+    await page.keyboard.press("Escape");
+    await expect(spread).toHaveCount(0);
+  }
+});
+
 test("grid covers use a consistent artwork, title, and footer slot without canvases", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");

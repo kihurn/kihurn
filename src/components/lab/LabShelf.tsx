@@ -54,26 +54,43 @@ function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
   const Face = onOpen ? "button" : "span";
   const Emblem = experimentEmblems[book.slug as keyof typeof experimentEmblems] ?? emblems[book.categories[0]] ?? Terminal;
   const artwork = projectEmblems[book.slug];
+  const peek = book.role ?? book.study?.how[0] ?? book.description ?? (book.stack.slice(0, 4).join(" · ") || book.summary);
+  const peekStack = compact ? book.stack.flatMap((tech) => tech.split(" + ")).slice(0, 4) : [];
+  const peekHeading = compact ? "Overview" : book.role ? "My role" : book.study ? "Architecture" : "Overview";
   return (
     <Face type={onOpen ? "button" : undefined} className="shelf-cover" data-compact={compact || undefined} onClick={onOpen}
       aria-label={onOpen ? `Open book: ${book.title}` : undefined}>
-      <span className="shelf-cover__binding text-mono-meta"><span>N°{number(index)}</span><span>{book.year}</span></span>
-      <span className="shelf-cover__body">
-        <span className="shelf-cover__imprint text-mono-meta"><span>{book.category}</span><span>{book.status}</span></span>
-        <span className="shelf-cover__art" aria-hidden="true">
-          {book.photo ? <Image src={book.photo} alt="" fill sizes="330px" /> : livePreview ? (
-            <LabMiniStage slug={book.slug} cover />
-          ) : artwork ? (
-            <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
-              <path d={artwork} />
-            </svg>
-          ) : <Emblem strokeWidth={1} />}
+      {onOpen && <span className="shelf-cover__page" aria-hidden="true">
+        <span className="shelf-cover__peek">
+          <span className="shelf-cover__peek-head text-mono-meta">{`N°${number(index)} // ${peekHeading}`}</span>
+          <span className="shelf-cover__excerpt">
+            {peekStack.length ? peekStack.map((tech) => <span key={tech}>{tech}</span>) : peek}
+          </span>
+          {(book.repo || book.live) && <span className="shelf-cover__sources text-mono-meta">
+            {book.repo && <span>GitHub</span>}{book.live && <span>Live</span>}
+          </span>}
+          <span className="shelf-cover__cue text-mono-meta"><span>Open book</span><ArrowRight size={13} /></span>
         </span>
-        <span className="shelf-cover__title">{compact && book.slug === "ibuniaga" ? "IbuNiaga Portal" : book.title}</span>
-        {!compact && <span className="shelf-cover__summary">{book.summary}</span>}
-        <span className="shelf-cover__foot">
-          {!compact && <span className="shelf-cover__stack">{book.stack.slice(0, 2).map((tech) => <span key={tech}>{tech}</span>)}</span>}
-          <span className="shelf-cover__cue text-mono-meta">Open book <ArrowRight size={15} /></span>
+      </span>}
+      <span className="shelf-cover__front">
+        <span className="shelf-cover__binding text-mono-meta"><span>N°{number(index)}</span><span>{book.year}</span></span>
+        <span className="shelf-cover__body">
+          <span className="shelf-cover__imprint text-mono-meta"><span>{book.category}</span><span>{book.status}</span></span>
+          <span className="shelf-cover__art" aria-hidden="true">
+            {book.photo ? <Image src={book.photo} alt="" fill sizes="330px" /> : livePreview ? (
+              <LabMiniStage slug={book.slug} cover />
+            ) : artwork ? (
+              <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+                <path d={artwork} />
+              </svg>
+            ) : <Emblem strokeWidth={1} />}
+          </span>
+          <span className="shelf-cover__title">{compact && book.slug === "ibuniaga" ? "IbuNiaga Portal" : book.title}</span>
+          {!compact && <span className="shelf-cover__summary">{book.summary}</span>}
+          <span className="shelf-cover__foot">
+            {!compact && <span className="shelf-cover__stack">{book.stack.slice(0, 2).map((tech) => <span key={tech}>{tech}</span>)}</span>}
+            <span className="shelf-cover__cue text-mono-meta">Open book <ArrowRight size={15} /></span>
+          </span>
         </span>
       </span>
     </Face>
