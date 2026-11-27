@@ -7,10 +7,12 @@ export function LabMiniStage({
   slug,
   interactive = true,
   className = "",
+  cover = false,
 }: {
   slug: string;
   interactive?: boolean;
   className?: string;
+  cover?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -32,7 +34,7 @@ export function LabMiniStage({
       const dark = document.documentElement.dataset.theme === "dark";
       const px = hovered ? pointer.x : width * 0.5 + Math.cos(t * 0.75) * width * 0.16;
       const py = hovered ? pointer.y : height * 0.5 + Math.sin(t * 1.05) * height * 0.14;
-      drawMiniExperimentFrame(ctx, slug, width, height, t, px, py, dark);
+      drawMiniExperimentFrame(ctx, slug, width, height, t, px, py, dark, cover);
     };
 
     const measure = () => {
@@ -120,7 +122,7 @@ export function LabMiniStage({
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);
     };
-  }, [slug, interactive]);
+  }, [slug, interactive, cover]);
 
   return <canvas ref={canvasRef} className={className ? `lab-mini-canvas ${className}` : "lab-mini-canvas"} aria-hidden="true" />;
 }

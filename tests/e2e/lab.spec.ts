@@ -31,6 +31,71 @@ test("wheel opens a spread, turns the page, and closes with Escape", async ({ pa
   await expect(book).toHaveCount(0);
 });
 
+test("the wheel advances through a single stationary spine and a single live cover", async ({ page, isMobile }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
+  const track = page.getByRole("region", { name: "Book spine wheel" });
+  const spine = page.locator(".shelf-spine");
+  await expect(spine).toHaveCount(1);
+  const initial = await spine.boundingBox();
+  await expect(page.locator(".shelf__preview canvas")).toHaveCount(1);
+  await track.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(spine).toHaveAccessibleName(`Open spine: ${experiments[1].title}`);
+  await expect.poll(() => track.evaluate((el) => el.scrollTop)).toBe(60);
+  expect(await spine.boundingBox()).toEqual(initial);
+
+  const box = (await spine.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  if (isMobile) {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 8; step++) {
+      await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y - step * 12.5 }] });
+    }
+    await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await session.detach();
+  } else {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 100, { steps: 8 });
+    await page.mouse.up();
+  }
+  await expect.poll(() => track.evaluate((el) => el.scrollTop)).toBeGreaterThan(120);
+  await expect.poll(() => track.evaluate((el) => el.scrollTop % 60)).toBe(0);
+  expect(await spine.boundingBox()).toEqual(initial);
+
+  await spine.click();
+  await expect(page.locator("dialog[open]")).toBeVisible();
+});
+
+test("grid covers use a consistent artwork, title, and footer slot without canvases", async ({ page, isMobile }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
+  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: /^grid$/i }).click();
+  const grid = page.locator(".shelf__grid");
+  await expect(grid.locator("canvas")).toHaveCount(0);
+  const columns = await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+  expect(columns).toBe(isMobile ? 1 : 4);
+  const slots = await grid.locator(".shelf-cover").evaluateAll((covers, count) => covers.slice(0, count).map((cover) => {
+    const art = cover.querySelector(".shelf-cover__art")!.getBoundingClientRect();
+    const title = cover.querySelector(".shelf-cover__title")!.getBoundingClientRect();
+    const foot = cover.querySelector(".shelf-cover__foot")!.getBoundingClientRect();
+    return { art: art.height, title: title.height, footer: foot.top };
+  }), columns);
+  expect(slots[0].art).toBe(135);
+  for (const slot of slots) {
+    expect(slot.art).toBe(slots[0].art);
+    expect(slot.title).toBe(slots[0].title);
+    expect(slot.footer).toBeCloseTo(slots[0].footer, 1);
+  }
+  const rowGap = await grid.locator(".shelf-cover").evaluateAll((covers, count) =>
+    covers[count].getBoundingClientRect().top - covers[0].getBoundingClientRect().bottom, columns);
+  expect(rowGap).toBeGreaterThanOrEqual(24);
+});
+
 test("project book deep links retain case-study details, source, and live links", async ({ page }) => {
   await page.goto("/lab?autostart=1#elysium");
   const book = page.locator("dialog[open]");

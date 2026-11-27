@@ -57,6 +57,7 @@ export function drawMiniExperimentFrame(
   px: number,
   py: number,
   dark: boolean,
+  cover = false,
 ) {
   const bg = dark ? "#181817" : "#ebeae7";
   const fg = dark ? "#ecece9" : "#1c1c1c";
@@ -119,9 +120,10 @@ export function drawMiniExperimentFrame(
   if (slug === "polka-field") {
     const dots = computeMiniHalftoneDots(w, h, px, py, 16, Math.min(w, h) * 0.36);
     for (const d of dots) {
+      const ripple = cover ? Math.sin(Math.hypot(d.x - px, d.y - py) * 0.13 - t * 3) : 0;
       ctx.fillStyle = d.hot ? accent : fg;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, d.r * (1 + ripple * 0.16), 0, Math.PI * 2);
       ctx.fill();
     }
     return;
@@ -166,7 +168,7 @@ export function drawMiniExperimentFrame(
   if (slug === "paper-poster") {
     const cols = 10;
     const rows = 13;
-    const pw = Math.min(w * 0.56, 150);
+    const pw = Math.min(w * 0.56, cover ? h * 0.62 : 150, 150);
     const ph = pw * 1.28;
     const left = cx - pw * 0.5;
     const top = cy - ph * 0.5;
@@ -332,7 +334,8 @@ export function drawProjectSchematic(
       ctx.setLineDash([]);
       nodes.forEach(([nx, ny], idx) => {
         ctx.fillStyle = idx === 1 ? accent : fg;
-        ctx.fillRect(nx * r - 4, ny * r - 4, 8, 8);
+        const size = 7 + Math.sin(t * 2.2 - idx) * 2;
+        ctx.fillRect(nx * r - size / 2, ny * r - size / 2, size, size);
       });
       break;
     }
@@ -342,7 +345,7 @@ export function drawProjectSchematic(
       ctx.strokeRect(-lw * 0.5, -lh * 0.5, lw, lh);
       for (let row = -3; row <= 3; row++) {
         const y = row * (r * 0.2);
-        ctx.strokeStyle = row === 3 ? accent : muted;
+        ctx.strokeStyle = row + 3 === Math.floor(t * 1.6) % 7 ? accent : muted;
         ctx.beginPath();
         ctx.moveTo(-lw * 0.36, y);
         ctx.lineTo(lw * 0.08, y);
@@ -377,6 +380,14 @@ export function drawProjectSchematic(
           ctx.fill();
         }
       }
+      ctx.strokeStyle = muted;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.13, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(Math.cos(t * .8) * r * 1.13, Math.sin(t * .8) * r * 1.13, 2.8, 0, Math.PI * 2);
+      ctx.fill();
       break;
     }
   }

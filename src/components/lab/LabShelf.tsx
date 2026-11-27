@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, AudioLines, CircuitBoard, Disc, Grid2X2, Layers, Network, Shield, Terminal, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CaseStudy } from "@/content/caseStudies";
 import type { Lens } from "@/content/types";
 import { normalizeLabMode, type LabViewMode } from "@/lib/labSchematics";
@@ -45,9 +45,10 @@ const emblems = { fullstack: Terminal, ai: CircuitBoard, networking: Network, se
 const experimentEmblems = { "vocal-orb": AudioLines, "polka-field": Grid2X2, "rotary-detent": Disc, "paper-poster": Layers } as const;
 const number = (n: number) => String(n).padStart(2, "0");
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const spineStep = 60;
 
-function Cover({ book, index, onOpen, compact = false }: {
-  book: ShelfBook; index: number; onOpen: () => void; compact?: boolean;
+function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
+  book: ShelfBook; index: number; onOpen: () => void; compact?: boolean; livePreview?: boolean;
 }) {
   const Emblem = experimentEmblems[book.slug as keyof typeof experimentEmblems] ?? emblems[book.categories[0]] ?? Terminal;
   const artwork = projectEmblems[book.slug];
@@ -58,13 +59,15 @@ function Cover({ book, index, onOpen, compact = false }: {
       <span className="shelf-cover__body">
         <span className="shelf-cover__imprint text-mono-meta"><span>{book.category}</span><span>{book.status}</span></span>
         <span className="shelf-cover__art" aria-hidden="true">
-          {book.photo ? <Image src={book.photo} alt="" fill sizes="330px" /> : artwork ? (
+          {book.photo ? <Image src={book.photo} alt="" fill sizes="330px" /> : livePreview ? (
+            <LabMiniStage slug={book.slug} cover />
+          ) : artwork ? (
             <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
               <path d={artwork} />
             </svg>
           ) : <Emblem strokeWidth={1} />}
         </span>
-        <span className="shelf-cover__title">{book.title}</span>
+        <span className="shelf-cover__title">{compact && book.slug === "ibuniaga" ? "IbuNiaga Portal" : book.title}</span>
         {!compact && <span className="shelf-cover__summary">{book.summary}</span>}
         <span className="shelf-cover__foot">
           {!compact && <span className="shelf-cover__stack">{book.stack.slice(0, 2).map((tech) => <span key={tech}>{tech}</span>)}</span>}
@@ -73,6 +76,116 @@ function Cover({ book, index, onOpen, compact = false }: {
       </span>
     </button>
   );
+}
+
+function positionSpines(track: HTMLDivElement) {
+  const position = track.scrollTop / spineStep;
+  Array.from(track.querySelectorAll<HTMLElement>(".shelf__arc-title")).forEach((label, index) => {
+    const distance = index - position;
+    const angle = Math.max(-.7, Math.min(.7, distance * .17));
+    label.style.transform = `translateX(${(Math.cos(angle) - 1) * 240}px) rotate(${angle * 37}deg)`;
+    label.style.opacity = String(Math.max(0, 1 - Math.abs(distance) * .19));
+  });
+}
+
+function bindSpineDrag(track: HTMLDivElement, wheelWindow: HTMLDivElement) {
+  let drag: { id: number; origin: number; top: number; y: number; time: number; velocity: number } | null = null;
+  let suppressClick = false;
+  let coastTimer = 0;
+  let wheelTravel = 0;
+  let wheelTarget = 0;
+  let lastWheel = -Infinity;
+
+  const stopCoasting = () => {
+    window.clearTimeout(coastTimer);
+    delete track.dataset.coasting;
+  };
+  const down = (event: PointerEvent) => {
+    if (event.button !== 0 || (event.pointerType !== "mouse" && track.contains(event.target as Node))) return;
+    suppressClick = false;
+    drag = { id: event.pointerId, origin: event.clientY, top: track.scrollTop, y: event.clientY, time: event.timeStamp, velocity: 0 };
+  };
+  const move = (event: PointerEvent) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    const offset = drag.origin - event.clientY;
+    if (!wheelWindow.hasPointerCapture(event.pointerId)) {
+      if (Math.abs(offset) < 5) return;
+      stopCoasting();
+      track.dataset.dragging = "true";
+      wheelWindow.setPointerCapture(event.pointerId);
+      suppressClick = true;
+    }
+    const duration = Math.max(8, event.timeStamp - drag.time);
+    drag.velocity = drag.velocity * .4 + (drag.y - event.clientY) / duration * .6;
+    drag.time = event.timeStamp;
+    drag.y = event.clientY;
+    track.scrollTop = drag.top + offset;
+  };
+  const release = (event: PointerEvent) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    const velocity = event.type === "pointerup" && event.timeStamp - drag.time < 90 ? drag.velocity : 0;
+    drag = null;
+    if (!wheelWindow.hasPointerCapture(event.pointerId)) return;
+    wheelWindow.releasePointerCapture(event.pointerId);
+    const reduce = reducedMotion();
+    const momentum = reduce ? 0 : Math.max(-spineStep * 3, Math.min(spineStep * 3, velocity * 145));
+    const target = Math.round((track.scrollTop + momentum) / spineStep) * spineStep;
+    const top = Math.max(0, Math.min(track.scrollHeight - track.clientHeight, target));
+    track.dataset.coasting = "true";
+    delete track.dataset.dragging;
+    if (reduce || Math.abs(top - track.scrollTop) < 1) {
+      track.scrollTo({ top, behavior: "instant" });
+      stopCoasting();
+    } else {
+      track.scrollTo({ top, behavior: "smooth" });
+      coastTimer = window.setTimeout(stopCoasting, 650);
+    }
+  };
+  const leave = () => { if (!track.dataset.dragging) drag = null; };
+  const click = (event: MouseEvent) => {
+    if (!suppressClick || event.detail === 0) return;
+    suppressClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const wheel = (event: WheelEvent) => {
+    stopCoasting();
+    const sideways = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+    if (!sideways && track.contains(event.target as Node)) return;
+    event.preventDefault();
+    if (event.timeStamp - lastWheel > 200) {
+      wheelTravel = 0;
+      wheelTarget = Math.round(track.scrollTop / spineStep) * spineStep;
+    }
+    lastWheel = event.timeStamp;
+    wheelTravel += (sideways ? event.deltaX || event.deltaY : event.deltaY) * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? spineStep : 1);
+    const steps = Math.trunc(wheelTravel / spineStep);
+    if (!steps) return;
+    wheelTravel -= steps * spineStep;
+    wheelTarget = Math.max(0, Math.min(track.scrollHeight - track.clientHeight, wheelTarget + steps * spineStep));
+    track.scrollTo({ top: wheelTarget, behavior: reducedMotion() ? "instant" : "smooth" });
+  };
+
+  wheelWindow.addEventListener("pointerdown", down);
+  wheelWindow.addEventListener("pointermove", move);
+  wheelWindow.addEventListener("pointerup", release);
+  wheelWindow.addEventListener("pointercancel", release);
+  wheelWindow.addEventListener("pointerleave", leave);
+  wheelWindow.addEventListener("click", click, true);
+  wheelWindow.addEventListener("wheel", wheel, { passive: false });
+  track.addEventListener("scrollend", stopCoasting);
+  return () => {
+    stopCoasting();
+    delete track.dataset.dragging;
+    wheelWindow.removeEventListener("pointerdown", down);
+    wheelWindow.removeEventListener("pointermove", move);
+    wheelWindow.removeEventListener("pointerup", release);
+    wheelWindow.removeEventListener("pointercancel", release);
+    wheelWindow.removeEventListener("pointerleave", leave);
+    wheelWindow.removeEventListener("click", click, true);
+    wheelWindow.removeEventListener("wheel", wheel);
+    track.removeEventListener("scrollend", stopCoasting);
+  };
 }
 
 function Spread({ book, index, total, direction, onClose, onTurn, canTurn }: {
@@ -152,6 +265,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
   const [open, setOpen] = useState<string | null>(null);
   const [direction, setDirection] = useState(0);
   const wheel = useRef<HTMLDivElement>(null);
+  const wheelWindow = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const visible = filter === "all" ? books : books.filter((book) => book.categories.includes(filter));
   const active = visible.find((book) => book.slug === selected) ?? visible[0];
@@ -186,43 +300,19 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
     };
   }, [books]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const track = wheel.current;
-    if (!track || open) return;
-    const center = () => {
-      const current = track.querySelector<HTMLElement>('[aria-current="true"]');
-      if (current) track.scrollTop = current.offsetTop - (track.clientHeight - current.offsetHeight) / 2;
-    };
-    const frame = requestAnimationFrame(center);
-    const observer = new ResizeObserver(center);
-    observer.observe(track);
-    let horizontal = 0;
-    let lastWheel = 0;
-    const horizontalWheel = (event: WheelEvent) => {
-      if (!event.shiftKey && Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
-      event.preventDefault();
-      const now = performance.now();
-      if (now - lastWheel > 200) horizontal = 0;
-      lastWheel = now;
-      horizontal += event.deltaX || event.deltaY;
-      if (Math.abs(horizontal) < 45) return;
-      track.scrollBy({ top: Math.sign(horizontal) * 60, behavior: "instant" });
-      horizontal = 0;
-    };
-    track.addEventListener("wheel", horizontalWheel, { passive: false });
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      track.removeEventListener("wheel", horizontalWheel);
-    };
+    const stage = wheelWindow.current;
+    if (!track || !stage || open) return;
+    const current = Array.from(track.querySelectorAll("[data-spine]")).findIndex((row) => row.getAttribute("aria-current") === "true");
+    track.scrollTop = Math.max(0, current) * spineStep;
+    positionSpines(track);
+    return bindSpineDrag(track, stage);
   }, [filter, mode, open]);
 
   function moveTo(book: ShelfBook) {
-    setSelected(book.slug);
-    const track = wheel.current;
-    const row = track?.querySelector<HTMLElement>(`[data-spine="${book.slug}"]`);
-    if (track && row) track.scrollTo({
-      top: row.offsetTop - (track.clientHeight - row.offsetHeight) / 2,
+    wheel.current?.scrollTo({
+      top: visible.indexOf(book) * spineStep,
       behavior: reducedMotion() ? "instant" : "smooth",
     });
   }
@@ -270,31 +360,36 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
       {mode === "wheel" && active && (
         <div className="shelf__wheel">
           <div className="shelf__column">
-            <div ref={wheel} className="shelf__track" data-lenis-prevent tabIndex={0} role="region" aria-label="Book spine wheel"
-              onKeyDown={(event) => {
-                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                  event.preventDefault();
-                  stepWheel(event.key === "ArrowDown" ? 1 : -1);
-                } else if (event.key === "Enter" && event.target === event.currentTarget) {
-                  event.preventDefault();
-                  openBook(active);
-                }
-              }}
-              onScroll={(event) => {
-                const el = event.currentTarget;
-                const current = visible[Math.min(visible.length - 1, Math.max(0, Math.round(el.scrollTop / 60)))];
-                if (current) setSelected(current.slug);
-              }}>
-              {visible.map((book) => (
-                <button key={book.slug} type="button" className="shelf-spine" data-spine={book.slug}
-                  aria-current={active.slug === book.slug ? true : undefined}
-                  onClick={() => active.slug === book.slug ? openBook(book) : moveTo(book)}>
-                  <span className="shelf-spine__index text-mono-meta">{number(books.indexOf(book) + 1)}</span>
-                  <span className="shelf-spine__title">{book.title}</span>
-                  {active.slug === book.slug && <><span className="shelf-spine__category text-mono-meta">{book.category}</span>
-                    <span className="shelf-spine__view text-mono-meta">View <ArrowRight size={15} /></span></>}
-                </button>
-              ))}
+            <div ref={wheelWindow} className="shelf__wheel-window" data-lenis-prevent>
+              <div ref={wheel} className="shelf__track" tabIndex={0} role="region" aria-label="Book spine wheel"
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                    event.preventDefault();
+                    stepWheel(event.key === "ArrowDown" ? 1 : -1);
+                  } else if (event.key === "Enter" && event.target === event.currentTarget) {
+                    event.preventDefault();
+                    openBook(active);
+                  }
+                }}
+                onScroll={(event) => {
+                  const el = event.currentTarget;
+                  positionSpines(el);
+                  const current = visible[Math.min(visible.length - 1, Math.max(0, Math.round(el.scrollTop / spineStep)))];
+                  if (current && current !== active) setSelected(current.slug);
+                }}>
+                {visible.map((book) => (
+                  <div key={book.slug} className="shelf__detent" data-spine={book.slug} aria-current={active === book ? true : undefined}>
+                    <button type="button" className="shelf__arc-title" tabIndex={-1} aria-hidden={active === book || undefined} onClick={() => moveTo(book)}>
+                      <span className="shelf-spine__index text-mono-meta">{number(books.indexOf(book) + 1)}</span>
+                      <span className="shelf-spine__title">{book.title}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="shelf-spine" aria-label={`Open spine: ${active.title}`} onClick={() => openBook(active)}>
+                <span className="shelf-spine__category text-mono-meta">{active.category}</span>
+                <span className="shelf-spine__view text-mono-meta">View <ArrowRight size={15} /></span>
+              </button>
             </div>
             <div className="shelf__wheel-controls">
               <button type="button" className="shelf-action" aria-label="Previous spine" disabled={visible[0] === active} onClick={() => stepWheel(-1)}><ArrowUp size={16} /></button>
@@ -303,7 +398,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
             </div>
             <p className="shelf__touch-hint text-mono-meta">Swipe to browse projects</p>
           </div>
-          <div className="shelf__preview"><Cover book={active} index={books.indexOf(active) + 1} onOpen={() => openBook(active)} /></div>
+          <div className="shelf__preview"><Cover book={active} index={books.indexOf(active) + 1} livePreview={!open} onOpen={() => openBook(active)} /></div>
         </div>
       )}
       {mode === "grid" && <div className="shelf__scroll shelf__grid" data-lenis-prevent>
