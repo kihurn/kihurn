@@ -43,6 +43,11 @@ body:has(.shelf[data-mode="wheel"]) > .header::before { height: calc(100% + .65r
   --shelf-cover-ratio: .8;
   --shelf-cover-width: min(var(--shelf-cover-ideal), max(165px, calc((100dvh - var(--shelf-top) - 9.25rem) * var(--shelf-cover-ratio))), 39vw);
   --shelf-depart: 550ms cubic-bezier(.22, 1, .36, 1);
+  --shelf-dock-bottom: clamp(1rem, 3.6dvh, 2rem);
+  --shelf-dock-gap: .4rem;
+  --shelf-mode-height: calc(2.4rem + 2px);
+  --shelf-filter-height: 1.7rem;
+  --shelf-filter-bottom: calc(var(--shelf-dock-bottom) + var(--shelf-mode-height) + var(--shelf-dock-gap));
   position: relative; display: block; max-inline-size: none; block-size: 100dvh; min-block-size: 0; overflow: hidden; padding: 0;
 }
 @media (width >= 1280px) { .shelf[data-mode="wheel"] { --shelf-cover-ideal: 420px; } }
@@ -51,12 +56,13 @@ body:has(.shelf[data-mode="wheel"]) > .header::before { height: calc(100% + .65r
 .shelf[data-morph]:not([data-mode="wheel"]) .shelf__header h1 { animation: shelf-title-in .42s var(--ease-out-cubic) both; }
 .shelf[data-morph][data-mode="wheel"] .shelf__header h1 { animation: shelf-title-out .24s var(--ease-out-cubic) both; }
 .shelf[data-mode="wheel"] .shelf__filters {
-  position: absolute; inset: max(6.1rem, calc(var(--shelf-top) - 1.15rem)) 0 auto; inline-size: max-content;
+  position: absolute; inset: auto 0 var(--shelf-filter-bottom); inline-size: max-content;
   margin-inline: auto; flex-wrap: nowrap; white-space: nowrap; gap: .35rem;
 }
-.shelf[data-mode="wheel"] .shelf__filters .shelf-action { min-block-size: 1.7rem; padding-inline: .5rem; }
+.shelf[data-mode="wheel"] .shelf__filters .shelf-action { min-block-size: var(--shelf-filter-height); padding-inline: .5rem; }
 .shelf[data-mode="wheel"] .shelf__modes {
-  position: absolute; inset-block-end: clamp(1rem, 3.6dvh, 2rem); inset-inline: 0; width: max-content; margin-inline: auto;
+  position: absolute; inset-block-end: var(--shelf-dock-bottom); inset-inline: 0; width: max-content; margin-inline: auto;
+  box-sizing: border-box; block-size: var(--shelf-mode-height);
   background: var(--shelf-cloth); border: 1px solid var(--divider); flex-wrap: nowrap;
 }
 .shelf__arrow { border-color: var(--line); }
@@ -111,17 +117,19 @@ body:has(.shelf[data-mode="wheel"]) > .header::before { height: calc(100% + .65r
 .shelf__detent[aria-current] .shelf__arc-title { color: var(--ink); }
 .shelf-spine__index { flex: 0 0 .9rem; opacity: .75; }
 .shelf-spine__title { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(1.625rem, 2.65vw, 2.375rem); line-height: 1.1; letter-spacing: -.028em; }
+.shelf__detent[aria-current] .shelf-spine__title { padding-inline-start: .5rem; }
 .shelf__detent[aria-current] .shelf-spine__index { opacity: 1; font-weight: 700; }
 .shelf-spine__category { padding: .18rem .42rem; border: 1px solid var(--divider); border-radius: .25rem; white-space: nowrap; }
 .shelf-spine__view { display: inline-flex; align-items: center; gap: .25rem; white-space: nowrap; text-transform: uppercase; }
 .shelf__touch-hint { display: none; }
-.shelf__preview { position: absolute; inset: calc(50% - var(--shelf-cover-width) / var(--shelf-cover-ratio) / 2) var(--shelf-side) auto auto; inline-size: var(--shelf-cover-width); perspective: 1000px; }
+.shelf__preview { position: absolute; inset: calc(50% - var(--shelf-cover-width) / var(--shelf-cover-ratio) / 2) var(--shelf-side) auto auto; inline-size: var(--shelf-cover-width); perspective: 1000px; transition: opacity var(--shelf-depart); }
 .shelf__preview .shelf-cover { aspect-ratio: var(--shelf-cover-ratio); }
-.shelf__preview, .shelf__wheel-window::before, .shelf-spine, .shelf__arc-title {
+.shelf[data-book-phase] .shelf__preview { opacity: 0; }
+.shelf__wheel-window::before, .shelf-spine, .shelf__arc-title {
   transition: opacity var(--shelf-depart), translate var(--shelf-depart), scale var(--shelf-depart), filter var(--shelf-depart);
 }
 .shelf[data-book-phase] .shelf__wheel-window::before,
-.shelf[data-book-phase] :is(.shelf__preview, .shelf-spine, .shelf__detent[aria-current] .shelf__arc-title) {
+.shelf[data-book-phase] :is(.shelf-spine, .shelf__detent[aria-current] .shelf__arc-title) {
   translate: 140px 0; scale: .96; opacity: 0;
 }
 .shelf[data-book-phase] .shelf__detent:not([aria-current]) .shelf__arc-title { opacity: .15; filter: blur(2px); }
@@ -258,12 +266,14 @@ body:has(.shelf[data-mode="wheel"]) > .header::before { height: calc(100% + .65r
     --shelf-side: 1rem;
     --shelf-top: clamp(7.35rem, 14dvh, 8rem);
     --shelf-wheel-height: clamp(105px, 23dvh, 12.5rem);
-    --shelf-book-top: calc(var(--shelf-top) + var(--shelf-wheel-height) + 5.05rem);
-    --shelf-cover-width: min(18rem, 86vw, max(8.5rem, calc((100dvh - var(--shelf-book-top) - 5rem) * var(--shelf-cover-ratio))));
+    --shelf-arc-top: calc(var(--shelf-top) + 1.15rem);
+    --shelf-book-top: calc(var(--shelf-arc-top) + var(--shelf-wheel-height) + 1.25rem);
+    --shelf-book-clearance: calc(var(--shelf-filter-bottom) + var(--shelf-filter-height) + .9rem);
+    --shelf-cover-width: min(18rem, 86vw, max(8.5rem, calc((100dvh - var(--shelf-book-top) - var(--shelf-book-clearance)) * var(--shelf-cover-ratio))));
   }
-  .shelf[data-mode="wheel"] .shelf__filters { inset-block-start: var(--shelf-top); gap: clamp(.14rem, .9vw, .3rem); }
+  .shelf[data-mode="wheel"] .shelf__filters { gap: clamp(.14rem, .9vw, .3rem); }
   .shelf[data-mode="wheel"] .shelf__filters .shelf-action { font-size: clamp(.55rem, 2.5vw, .68rem); padding-inline: clamp(.22rem, 1.1vw, .5rem); }
-  .shelf__column { inset: calc(var(--shelf-top) + 3.8rem) var(--shelf-side) auto; inline-size: auto; block-size: var(--shelf-wheel-height); }
+  .shelf__column { inset: var(--shelf-arc-top) var(--shelf-side) auto; inline-size: auto; block-size: var(--shelf-wheel-height); }
   .shelf__touch-hint { display: block; margin: .12rem 0 0; text-align: center; color: var(--ink-muted); }
   .shelf__wheel-window { --shelf-spine-inset: 0rem; --shelf-spine-actions: 6.8rem; --shelf-spine-height: 52px; --shelf-spine-width: calc(100% - .25rem); }
   .shelf__track { --shelf-row-step: 49px; }
