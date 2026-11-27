@@ -150,44 +150,53 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
   }
 });
 
-test("List offers three mouse hover styles and clears when the pointer leaves", async ({ page, isMobile }) => {
+test("List combines the moving hairline and soft spotlight on hover-capable devices", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
   await page.getByRole("button", { name: /^list$/i }).click();
   const list = page.locator(".shelf__list");
   const row = list.locator(".shelf-row").nth(1);
   const sibling = list.locator(".shelf-row").first();
-  const tools = page.getByRole("group", { name: "List hover style" });
   await row.hover();
   await expect(row).toHaveCSS("opacity", "1");
+  await expect(row.locator("svg")).toHaveCount(1);
   if (isMobile) {
-    await expect(tools).toBeHidden();
     await expect(sibling).toHaveCSS("opacity", "1");
-    await expect(row.locator(".shelf-row__pointer")).toBeHidden();
   } else {
-    await expect(tools.getByRole("button", { name: "Moving hairline" })).toHaveAttribute("aria-pressed", "true");
     const lineOpacity = () => list.evaluate((node) => getComputedStyle(node, "::before").opacity);
     await expect.poll(lineOpacity).toBe("1");
-    await expect(row.locator(".shelf-row__pointer")).toBeHidden();
+    await expect(sibling).toHaveCSS("opacity", "0.64");
     await sibling.hover();
     await expect.poll(() => list.evaluate((node) => getComputedStyle(node, "::before").transform)).toBe("matrix(1, 0, 0, 1, 0, 0)");
+    await expect(sibling).toHaveCSS("opacity", "1");
+    await expect(row).toHaveCSS("transform", "none");
     await page.mouse.move(2, 2);
     await expect.poll(lineOpacity).toBe("0");
-
-    await tools.getByRole("button", { name: "Arrow only" }).click();
-    await row.hover();
-    await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "1");
-    await expect(sibling).toHaveCSS("opacity", "1");
-
-    await tools.getByRole("button", { name: "Soft spotlight" }).click();
-    await row.hover();
-    await expect(row).toHaveCSS("transform", "none");
-    await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "1");
-    await expect(sibling).toHaveCSS("opacity", "0.7");
-    await page.mouse.move(2, 2);
-    await expect(sibling).toHaveCSS("opacity", "1");
-    await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "0");
+    await expect(row).toHaveCSS("opacity", "1");
   }
+});
+
+test("List sorting respects the category filter and open-book navigation", async ({ page }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
+  await page.getByRole("button", { name: /^list$/i }).click();
+  await page.getByRole("button", { name: "Motion", exact: true }).click();
+  const sort = page.getByRole("combobox", { name: "Sort projects" });
+  const titles = page.locator(".shelf-row strong");
+  await expect(titles).toHaveText(experiments.map((book) => book.title));
+  await sort.selectOption("newest");
+  await expect(titles).toHaveText(experiments.toSorted((a, b) => Number(b.year) - Number(a.year)).map((book) => book.title));
+  await sort.selectOption("title-asc");
+  const ascending = experiments.map((book) => book.title).toSorted((a, b) => a.localeCompare(b, "en"));
+  await expect(titles).toHaveText(ascending);
+  await sort.selectOption("title-desc");
+  const descending = ascending.toReversed();
+  await expect(titles).toHaveText(descending);
+  await page.locator(".shelf-row").first().click();
+  const book = page.locator("dialog[open]");
+  await expect(book.getByRole("heading", { level: 2 })).toHaveText(descending[0]);
+  await book.getByRole("button", { name: "Next" }).click();
+  await expect(book.getByRole("heading", { level: 2 })).toHaveText(descending[1]);
 });
 
 test("grid covers use a consistent artwork, title, and footer slot without canvases", async ({ page, isMobile }) => {

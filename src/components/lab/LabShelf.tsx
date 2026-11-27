@@ -14,6 +14,7 @@ import { ShotSlot } from "./Parts";
 
 type Category = Lens | "motion";
 type Filter = Category | "all";
+type ListSort = "shelf" | "title-asc" | "title-desc" | "newest";
 
 export interface ShelfBook {
   slug: string;
@@ -42,7 +43,6 @@ const filters: { id: Filter; label: string }[] = [
   { id: "networking", label: "Networking" }, { id: "security", label: "Security" }, { id: "motion", label: "Motion" },
 ];
 const modes: LabViewMode[] = ["list", "wheel", "grid"];
-const listHoverStyles = { hairline: "Moving hairline", arrow: "Arrow only", spotlight: "Soft spotlight" };
 const emblems = { fullstack: Terminal, ai: CircuitBoard, networking: Network, security: Shield, motion: AudioLines };
 const experimentEmblems = { "vocal-orb": AudioLines, "polka-field": Grid2X2, "rotary-detent": Disc, "paper-poster": Layers } as const;
 const number = (n: number) => String(n).padStart(2, "0");
@@ -179,7 +179,7 @@ function Spread({ book, index, total, direction, closing, fromWheel, onClose, on
 export function LabShelf({ books }: { books: ShelfBook[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [listHover, setListHover] = useState<keyof typeof listHoverStyles>("hairline");
+  const [listSort, setListSort] = useState<ListSort>("shelf");
   const [mode, setMode] = useState<LabViewMode>("wheel");
   const [selected, setSelected] = useState(books[0].slug);
   const [open, setOpen] = useState<string | null>(null);
@@ -196,6 +196,12 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
   const timer = useRef(0);
   const opener = useRef<HTMLElement | null>(null);
   const visible = useMemo(() => filter === "all" ? books : books.filter((book) => book.categories.includes(filter)), [books, filter]);
+  const listBooks = useMemo(() => {
+    if (listSort === "shelf") return visible;
+    if (listSort === "newest") return [...visible].sort((a, b) => Number(b.year ?? 0) - Number(a.year ?? 0));
+    const order = listSort === "title-asc" ? 1 : -1;
+    return [...visible].sort((a, b) => order * a.title.localeCompare(b.title, "en", { numeric: true, sensitivity: "base" }));
+  }, [visible, listSort]);
   const active = visible.find((book) => book.slug === selected) ?? visible[0];
   const opened = books.find((book) => book.slug === open);
   const busy = Boolean(open || pending);
@@ -323,8 +329,9 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
   }
 
   function turnBook(step: number) {
-    const index = visible.findIndex((book) => book.slug === open);
-    const next = visible[(index + step + visible.length) % visible.length];
+    const sequence = mode === "list" ? listBooks : visible;
+    const index = sequence.findIndex((book) => book.slug === open);
+    const next = sequence[(index + step + sequence.length) % sequence.length];
     if (next && !closing) showBook(next, step);
   }
 
@@ -393,14 +400,20 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
       </div>}
       {mode === "list" && (
         <div>
-          <div className="shelf__list-tools" role="group" aria-label="List hover style">
-            {(Object.keys(listHoverStyles) as (keyof typeof listHoverStyles)[]).map((style) => (
-              <button key={style} type="button" className="shelf-action" aria-pressed={listHover === style}
-                onClick={() => { setHoveredId(null); setListHover(style); }}>{listHoverStyles[style]}</button>
-            ))}
-          </div>
-          <ol className="shelf__list" data-hover-style={listHover} data-spotlight={hoveredId !== null || undefined} onMouseLeave={() => setHoveredId(null)}>
-            {visible.map((book) => <li key={book.slug} data-spotlit={hoveredId === book.slug || undefined}
+          <label className="shelf__list-sort text-mono-meta">
+            Sort
+            <select aria-label="Sort projects" value={listSort} onChange={(event) => {
+              setHoveredId(null);
+              setListSort(event.target.value as ListSort);
+            }}>
+              <option value="shelf">Shelf order</option>
+              <option value="title-asc">Title A–Z</option>
+              <option value="title-desc">Title Z–A</option>
+              <option value="newest">Newest first</option>
+            </select>
+          </label>
+          <ol className="shelf__list" data-spotlight={hoveredId !== null || undefined} onMouseLeave={() => setHoveredId(null)}>
+            {listBooks.map((book) => <li key={book.slug} data-spotlit={hoveredId === book.slug || undefined}
               onPointerEnter={(event) => {
                 if (event.pointerType !== "mouse") return;
                 const row = event.currentTarget;
@@ -408,7 +421,6 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
                 setHoveredId(book.slug);
               }}>
               <button type="button" className="shelf-row" onClick={() => openBook(book)}>
-                <ArrowRight className="shelf-row__pointer" size={14} aria-hidden="true" />
                 <span className="text-mono-meta">{number(books.indexOf(book) + 1)}</span><strong>{book.title}</strong>
                 <span className="shelf-row__category text-mono-meta">{book.category}</span>
                 <span className="text-mono-meta">{book.status}</span><ArrowRight size={17} aria-hidden="true" />
