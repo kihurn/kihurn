@@ -54,23 +54,15 @@ function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
   const Face = onOpen ? "button" : "span";
   const Emblem = experimentEmblems[book.slug as keyof typeof experimentEmblems] ?? emblems[book.categories[0]] ?? Terminal;
   const artwork = projectEmblems[book.slug];
-  const peek = book.role ?? book.study?.how[0] ?? book.description ?? (book.stack.slice(0, 4).join(" · ") || book.summary);
-  const peekStack = compact ? book.stack.flatMap((tech) => tech.split(" + ")).slice(0, 4) : [];
-  const peekHeading = compact ? "Overview" : book.role ? "My role" : book.study ? "Architecture" : "Overview";
   return (
     <Face type={onOpen ? "button" : undefined} className="shelf-cover" data-compact={compact || undefined} onClick={onOpen}
       aria-label={onOpen ? `Open book: ${book.title}` : undefined}>
       <span className="shelf-cover__scene">
         {onOpen && <span className="shelf-cover__page" aria-hidden="true">
-          <span className="shelf-cover__peek">
-            <span className="shelf-cover__peek-head text-mono-meta">{`N°${number(index)} // ${peekHeading}`}</span>
-            <span className="shelf-cover__excerpt">
-              {peekStack.length ? peekStack.map((tech) => <span key={tech}>{tech}</span>) : peek}
-            </span>
-            {(book.repo || book.live) && <span className="shelf-cover__sources text-mono-meta">
-              {book.repo && <span>GitHub</span>}{book.live && <span>Live</span>}
-            </span>}
-            <span className="shelf-cover__cue text-mono-meta"><span>Open book</span><ArrowRight size={13} /></span>
+          <span className="shelf-cover__peek text-mono-meta">
+            <span className="shelf-cover__folio">P.{number(index)}</span>
+            {book.year && <span>{book.year}</span>}
+            {book.live ? <span>Live</span> : book.repo && <span>Code</span>}
           </span>
         </span>}
         <span className="shelf-cover__front">
@@ -180,6 +172,7 @@ function Spread({ book, index, total, direction, closing, fromWheel, onClose, on
 
 export function LabShelf({ books }: { books: ShelfBook[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mode, setMode] = useState<LabViewMode>("wheel");
   const [selected, setSelected] = useState(books[0].slug);
   const [open, setOpen] = useState<string | null>(null);
@@ -257,7 +250,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
       const dx = before[index].left + (before[index].width - after.width) / 2 - after.left;
       const dy = before[index].top - after.top;
       return [el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
-        duration: 420, easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        duration: 680, easing: "cubic-bezier(0.22, 1, 0.36, 1)",
       })];
     });
   }, [mode]);
@@ -279,6 +272,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
     dockRects.current = docks[0] && docks[1] ? docks.map((el) => el!.getBoundingClientRect()) : null;
     shelf.current?.setAttribute("data-morph", "true");
     window.scrollTo({ top: 0, behavior: "instant" });
+    setHoveredId(null);
     setMode(view);
     try { localStorage.setItem("lab-mode", view); } catch {}
   }
@@ -333,7 +327,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
         <h1 className="text-display">Lab</h1>
         <div ref={filtersRef} className="shelf__filters" aria-label="Filter books" role="group" inert={busy}>
           {filters.map(({ id, label }) => <button key={id} type="button" className="shelf-action" aria-pressed={filter === id}
-            onClick={() => setFilter(id)}>{label}</button>)}
+            onClick={() => { setHoveredId(null); setFilter(id); }}>{label}</button>)}
         </div>
         <div ref={modesRef} className="shelf__modes" aria-label="Shelf view" role="group" inert={busy}>
           {mode === "wheel" && <button type="button" className="shelf-action shelf__arrow" aria-label="Previous spine"
@@ -391,9 +385,11 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
         {visible.map((book) => <Cover key={book.slug} book={book} index={books.indexOf(book) + 1} compact onOpen={() => openBook(book)} />)}
       </div>}
       {mode === "list" && (
-        <ol className="shelf__list">
-          {visible.map((book) => <li key={book.slug}>
+        <ol className="shelf__list" data-spotlight={hoveredId !== null || undefined} onMouseLeave={() => setHoveredId(null)}>
+          {visible.map((book) => <li key={book.slug} data-spotlit={hoveredId === book.slug || undefined}
+            onPointerEnter={(event) => { if (event.pointerType === "mouse") setHoveredId(book.slug); }}>
             <button type="button" className="shelf-row" onClick={() => openBook(book)}>
+              <ArrowRight className="shelf-row__pointer" size={14} aria-hidden="true" />
               <span className="text-mono-meta">{number(books.indexOf(book) + 1)}</span><strong>{book.title}</strong>
               <span className="shelf-row__category text-mono-meta">{book.category}</span>
               <span className="text-mono-meta">{book.status}</span><ArrowRight size={17} aria-hidden="true" />

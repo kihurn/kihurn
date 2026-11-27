@@ -116,7 +116,9 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
     const front = cover.locator(".shelf-cover__front");
     const inner = cover.locator(".shelf-cover__page");
     await expect(front).toBeVisible();
-    await expect(inner).toContainText("Overview");
+    await expect(inner.locator(".shelf-cover__folio")).toHaveText("P.01");
+    await expect(inner).toContainText("2026");
+    await expect(inner.locator(".shelf-cover__cue")).toHaveCount(0);
     await cover.hover();
     if (isMobile) {
       await expect(inner).toBeHidden();
@@ -129,14 +131,14 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
       })).toBe(mode === "wheel" ? 375 : 469);
       await expect(scene).toHaveCSS("perspective", "1200px");
       await expect(cover).toHaveCSS("transform", "none");
+      await expect.poll(() => cover.evaluate((node) => {
+        const front = node.querySelector(".shelf-cover__front")!.getBoundingClientRect();
+        const folio = node.querySelector(".shelf-cover__folio")!.getBoundingClientRect();
+        return folio.left >= front.right;
+      })).toBe(true);
       if (mode === "wheel") {
         await expect(scene).toHaveCSS("animation-name", "shelf-preview-idle");
         await expect(scene).not.toHaveCSS("transform", "none");
-        await expect.poll(() => cover.evaluate((node) => {
-          const front = node.querySelector(".shelf-cover__front")!.getBoundingClientRect();
-          const text = node.querySelector(".shelf-cover__excerpt")!.getBoundingClientRect();
-          return text.left < front.right && front.right < text.right;
-        })).toBe(true);
       }
     }
     await cover.click();
@@ -144,6 +146,28 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
     await expect(spread.getByRole("heading", { level: 2 })).toHaveText(experiments[0].title);
     await page.keyboard.press("Escape");
     await expect(spread).toHaveCount(0);
+  }
+});
+
+test("List spotlights mouse-hovered rows and clears when the pointer leaves", async ({ page, isMobile }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
+  await page.getByRole("button", { name: /^list$/i }).click();
+  const list = page.locator(".shelf__list");
+  const row = list.locator(".shelf-row").first();
+  const sibling = list.locator(".shelf-row").nth(1);
+  await row.hover();
+  await expect(row).toHaveCSS("opacity", "1");
+  if (isMobile) {
+    await expect(sibling).toHaveCSS("opacity", "1");
+    await expect(row.locator(".shelf-row__pointer")).toBeHidden();
+  } else {
+    await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "1");
+    await expect(row).toHaveCSS("transform", "matrix(1, 0, 0, 1, 6, 0)");
+    await expect(sibling).toHaveCSS("opacity", "0.32");
+    await page.mouse.move(2, 2);
+    await expect(sibling).toHaveCSS("opacity", "1");
+    await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "0");
   }
 });
 
