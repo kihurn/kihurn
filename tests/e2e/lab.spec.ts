@@ -20,14 +20,18 @@ test("one filter applies across the spine wheel, grid, and list", async ({ page 
 test("wheel opens a spread, turns the page, and closes with Escape", async ({ page }) => {
   await page.goto("/lab?autostart=1");
   const wheel = page.getByRole("region", { name: "Book spine wheel" });
+  await expect(wheel.locator("[aria-current=true]")).toBeVisible();
   await wheel.focus();
   await page.keyboard.press("Enter");
   const book = page.locator("dialog[open]");
+  await expect(page.locator(".shelf")).toHaveAttribute("data-book-phase", "departing");
+  expect(await book.count()).toBe(0);
   await expect(book.getByRole("heading", { level: 2 })).toHaveText(experiments[0].title);
   await expect(book.getByRole("link", { name: "Open Live Stage" })).toHaveAttribute("href", `/lab/${experiments[0].slug}`);
   await book.getByRole("button", { name: "Next" }).click();
   await expect(book.getByRole("heading", { level: 2 })).toHaveText(experiments[1].title);
   await page.keyboard.press("Escape");
+  await expect(book).toHaveAttribute("data-closing", "true");
   await expect(book).toHaveCount(0);
 });
 
@@ -39,10 +43,15 @@ test("the wheel advances through a single stationary spine and a single live cov
   await expect(spine).toHaveCount(1);
   const initial = await spine.boundingBox();
   await expect(page.locator(".shelf__preview canvas")).toHaveCount(1);
+  await page.getByRole("button", { name: "Previous spine" }).click();
+  const last = track.locator("[data-spine]").last();
+  await expect(last).toHaveAttribute("aria-current", "true");
+  await expect(page.locator(".shelf__preview button")).toHaveAccessibleName(await spine.getAttribute("aria-label").then((name) => name!.replace("Open spine", "Open book")));
+  await page.getByRole("button", { name: "Next spine" }).click();
+  await expect(track.locator("[data-spine]").first()).toHaveAttribute("aria-current", "true");
   await track.focus();
   await page.keyboard.press("ArrowDown");
   await expect(spine).toHaveAccessibleName(`Open spine: ${experiments[1].title}`);
-  await expect.poll(() => track.evaluate((el) => el.scrollTop)).toBe(60);
   expect(await spine.boundingBox()).toEqual(initial);
 
   const box = (await spine.boundingBox())!;
@@ -62,12 +71,39 @@ test("the wheel advances through a single stationary spine and a single live cov
     await page.mouse.move(x, y - 100, { steps: 8 });
     await page.mouse.up();
   }
-  await expect.poll(() => track.evaluate((el) => el.scrollTop)).toBeGreaterThan(120);
-  await expect.poll(() => track.evaluate((el) => el.scrollTop % 60)).toBe(0);
+  await expect(spine).not.toHaveAccessibleName(`Open spine: ${experiments[1].title}`);
   expect(await spine.boundingBox()).toEqual(initial);
 
   await spine.click();
   await expect(page.locator("dialog[open]")).toBeVisible();
+});
+
+test("Grid and List scroll the document and Wheel locks to the viewport", async ({ page }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBe(0);
+  for (const mode of ["grid", "list"]) {
+    await page.getByRole("button", { name: new RegExp(`^${mode}$`, "i") }).click();
+    await page.locator("footer").scrollIntoViewIfNeeded();
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
+  }
+  await page.getByRole("button", { name: /^wheel$/i }).click();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
+});
+
+test("Grid and List open directly into the hinged spread", async ({ page }) => {
+  await page.goto("/lab?autostart=1");
+  await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
+  for (const mode of ["grid", "list"]) {
+    await page.getByRole("button", { name: new RegExp(`^${mode}$`, "i") }).click();
+    const entry = mode === "grid" ? page.getByRole("button", { name: `Open book: ${experiments[0].title}` }) : page.locator(".shelf-row").first();
+    await entry.click();
+    await expect(page.locator(".shelf")).toHaveAttribute("data-book-phase", "open");
+    const spread = page.locator("dialog[open]");
+    await expect(spread.locator(".shelf-spread__hinge")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(spread).toHaveCount(0);
+  }
 });
 
 test("grid covers use a consistent artwork, title, and footer slot without canvases", async ({ page, isMobile }) => {

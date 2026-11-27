@@ -38,9 +38,8 @@ export function LabMiniStage({
     };
 
     const measure = () => {
-      const r = canvas.getBoundingClientRect();
-      width = Math.max(160, Math.round(r.width));
-      height = Math.max(120, Math.round(r.height));
+      width = canvas.clientWidth || 160;
+      height = canvas.clientHeight || 120;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -93,8 +92,8 @@ export function LabMiniStage({
     };
     const onMove = (e: PointerEvent) => {
       const r = canvas.getBoundingClientRect();
-      pointer.x = e.clientX - r.left;
-      pointer.y = e.clientY - r.top;
+      pointer.x = (e.clientX - r.left) * width / Math.max(1, r.width);
+      pointer.y = (e.clientY - r.top) * height / Math.max(1, r.height);
       if (reduced || (!interactive && !hovered)) renderOnce();
     };
     const onLeave = () => {
