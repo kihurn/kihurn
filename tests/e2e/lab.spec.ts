@@ -118,6 +118,7 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
     await expect(front).toBeVisible();
     await expect(inner.locator(".shelf-cover__folio")).toHaveText("P.01");
     await expect(inner).toContainText("2026");
+    await expect(inner.locator(".shelf-cover__excerpt")).toContainText(mode === "wheel" ? "icosahedron" : "GLSL");
     await expect(inner.locator(".shelf-cover__cue")).toHaveCount(0);
     await cover.hover();
     if (isMobile) {
@@ -149,22 +150,40 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
   }
 });
 
-test("List spotlights mouse-hovered rows and clears when the pointer leaves", async ({ page, isMobile }) => {
+test("List offers three mouse hover styles and clears when the pointer leaves", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
   await page.getByRole("button", { name: /^list$/i }).click();
   const list = page.locator(".shelf__list");
-  const row = list.locator(".shelf-row").first();
-  const sibling = list.locator(".shelf-row").nth(1);
+  const row = list.locator(".shelf-row").nth(1);
+  const sibling = list.locator(".shelf-row").first();
+  const tools = page.getByRole("group", { name: "List hover style" });
   await row.hover();
   await expect(row).toHaveCSS("opacity", "1");
   if (isMobile) {
+    await expect(tools).toBeHidden();
     await expect(sibling).toHaveCSS("opacity", "1");
     await expect(row.locator(".shelf-row__pointer")).toBeHidden();
   } else {
+    await expect(tools.getByRole("button", { name: "Moving hairline" })).toHaveAttribute("aria-pressed", "true");
+    const lineOpacity = () => list.evaluate((node) => getComputedStyle(node, "::before").opacity);
+    await expect.poll(lineOpacity).toBe("1");
+    await expect(row.locator(".shelf-row__pointer")).toBeHidden();
+    await sibling.hover();
+    await expect.poll(() => list.evaluate((node) => getComputedStyle(node, "::before").transform)).toBe("matrix(1, 0, 0, 1, 0, 0)");
+    await page.mouse.move(2, 2);
+    await expect.poll(lineOpacity).toBe("0");
+
+    await tools.getByRole("button", { name: "Arrow only" }).click();
+    await row.hover();
     await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "1");
-    await expect(row).toHaveCSS("transform", "matrix(1, 0, 0, 1, 6, 0)");
-    await expect(sibling).toHaveCSS("opacity", "0.32");
+    await expect(sibling).toHaveCSS("opacity", "1");
+
+    await tools.getByRole("button", { name: "Soft spotlight" }).click();
+    await row.hover();
+    await expect(row).toHaveCSS("transform", "none");
+    await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "1");
+    await expect(sibling).toHaveCSS("opacity", "0.7");
     await page.mouse.move(2, 2);
     await expect(sibling).toHaveCSS("opacity", "1");
     await expect(row.locator(".shelf-row__pointer")).toHaveCSS("opacity", "0");

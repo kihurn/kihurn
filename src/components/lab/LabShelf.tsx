@@ -42,6 +42,7 @@ const filters: { id: Filter; label: string }[] = [
   { id: "networking", label: "Networking" }, { id: "security", label: "Security" }, { id: "motion", label: "Motion" },
 ];
 const modes: LabViewMode[] = ["list", "wheel", "grid"];
+const listHoverStyles = { hairline: "Moving hairline", arrow: "Arrow only", spotlight: "Soft spotlight" };
 const emblems = { fullstack: Terminal, ai: CircuitBoard, networking: Network, security: Shield, motion: AudioLines };
 const experimentEmblems = { "vocal-orb": AudioLines, "polka-field": Grid2X2, "rotary-detent": Disc, "paper-poster": Layers } as const;
 const number = (n: number) => String(n).padStart(2, "0");
@@ -54,15 +55,20 @@ function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
   const Face = onOpen ? "button" : "span";
   const Emblem = experimentEmblems[book.slug as keyof typeof experimentEmblems] ?? emblems[book.categories[0]] ?? Terminal;
   const artwork = projectEmblems[book.slug];
+  const excerpt = book.role ?? book.study?.how[0] ?? book.description ?? book.summary;
+  const peekStack = compact ? book.stack.flatMap((tech) => tech.split(" + ")).slice(0, 4) : [];
   return (
     <Face type={onOpen ? "button" : undefined} className="shelf-cover" data-compact={compact || undefined} onClick={onOpen}
       aria-label={onOpen ? `Open book: ${book.title}` : undefined}>
       <span className="shelf-cover__scene">
         {onOpen && <span className="shelf-cover__page" aria-hidden="true">
-          <span className="shelf-cover__peek text-mono-meta">
+          <span className="shelf-cover__peek">
             <span className="shelf-cover__folio">P.{number(index)}</span>
             {book.year && <span>{book.year}</span>}
             {book.live ? <span>Live</span> : book.repo && <span>Code</span>}
+            <span className="shelf-cover__excerpt">
+              {peekStack.length ? peekStack.map((tech) => <span key={tech}>{tech}</span>) : excerpt}
+            </span>
           </span>
         </span>}
         <span className="shelf-cover__front">
@@ -173,6 +179,7 @@ function Spread({ book, index, total, direction, closing, fromWheel, onClose, on
 export function LabShelf({ books }: { books: ShelfBook[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [listHover, setListHover] = useState<keyof typeof listHoverStyles>("hairline");
   const [mode, setMode] = useState<LabViewMode>("wheel");
   const [selected, setSelected] = useState(books[0].slug);
   const [open, setOpen] = useState<string | null>(null);
@@ -385,17 +392,30 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
         {visible.map((book) => <Cover key={book.slug} book={book} index={books.indexOf(book) + 1} compact onOpen={() => openBook(book)} />)}
       </div>}
       {mode === "list" && (
-        <ol className="shelf__list" data-spotlight={hoveredId !== null || undefined} onMouseLeave={() => setHoveredId(null)}>
-          {visible.map((book) => <li key={book.slug} data-spotlit={hoveredId === book.slug || undefined}
-            onPointerEnter={(event) => { if (event.pointerType === "mouse") setHoveredId(book.slug); }}>
-            <button type="button" className="shelf-row" onClick={() => openBook(book)}>
-              <ArrowRight className="shelf-row__pointer" size={14} aria-hidden="true" />
-              <span className="text-mono-meta">{number(books.indexOf(book) + 1)}</span><strong>{book.title}</strong>
-              <span className="shelf-row__category text-mono-meta">{book.category}</span>
-              <span className="text-mono-meta">{book.status}</span><ArrowRight size={17} aria-hidden="true" />
-            </button>
-          </li>)}
-        </ol>
+        <div>
+          <div className="shelf__list-tools" role="group" aria-label="List hover style">
+            {(Object.keys(listHoverStyles) as (keyof typeof listHoverStyles)[]).map((style) => (
+              <button key={style} type="button" className="shelf-action" aria-pressed={listHover === style}
+                onClick={() => { setHoveredId(null); setListHover(style); }}>{listHoverStyles[style]}</button>
+            ))}
+          </div>
+          <ol className="shelf__list" data-hover-style={listHover} data-spotlight={hoveredId !== null || undefined} onMouseLeave={() => setHoveredId(null)}>
+            {visible.map((book) => <li key={book.slug} data-spotlit={hoveredId === book.slug || undefined}
+              onPointerEnter={(event) => {
+                if (event.pointerType !== "mouse") return;
+                const row = event.currentTarget;
+                row.parentElement?.style.setProperty("--shelf-reader-y", `${row.offsetTop}px`);
+                setHoveredId(book.slug);
+              }}>
+              <button type="button" className="shelf-row" onClick={() => openBook(book)}>
+                <ArrowRight className="shelf-row__pointer" size={14} aria-hidden="true" />
+                <span className="text-mono-meta">{number(books.indexOf(book) + 1)}</span><strong>{book.title}</strong>
+                <span className="shelf-row__category text-mono-meta">{book.category}</span>
+                <span className="text-mono-meta">{book.status}</span><ArrowRight size={17} aria-hidden="true" />
+              </button>
+            </li>)}
+          </ol>
+        </div>
       )}
       {opened && <Spread book={opened} index={books.indexOf(opened) + 1} total={books.length}
         direction={direction} closing={closing} fromWheel={mode === "wheel"} onClose={closeBook} onTurn={turnBook} canTurn={visible.length > 1} />}
