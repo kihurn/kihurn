@@ -3,7 +3,7 @@ import { MobileNav } from "./MobileNav";
 import { NewsPanel } from "./NewsBell";
 import { Preloader } from "./Preloader";
 import { PageTransitionWipe } from "./PageTransitionWipe";
-import { ScrollDial } from "./ScrollDial";
+import { WheelScroll } from "./WheelScroll";
 
 export function Overlays({ projects }: { projects: PaletteProject[] }) {
   return (
@@ -13,7 +13,7 @@ export function Overlays({ projects }: { projects: PaletteProject[] }) {
       <CommandPalette projects={projects} />
       <NewsPanel />
       <MobileNav />
-      <ScrollDial />
+      <WheelScroll />
       <div className="hud-toast text-mono-meta" role="status" aria-live="polite" data-hud-toast hidden />
     </>
   );

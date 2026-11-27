@@ -304,6 +304,10 @@ body:has(.shelf[data-mode="wheel"]) > .header::before { height: calc(100% + .65r
 .shelf-spread[data-closing] .shelf-spread__page > * { opacity: 0; transition: opacity 100ms ease-out; }
 .shelf-spread__visuals { backface-visibility: hidden; box-shadow: inset -1.05rem 0 1.35rem -1.15rem #0009; }
 .shelf-spread__details { box-shadow: inset 1.05rem 0 1.35rem -1.15rem #0009; border-inline-start: 1px solid var(--divider); }
+@media (width >= 768px) {
+  .shelf-spread__details { direction: rtl; border-inline-start: 0; border-left: 1px solid var(--divider); }
+  .shelf-spread__details > * { direction: ltr; }
+}
 .shelf-spread__visuals .shot, .shelf-spread__stage { flex-shrink: 0; aspect-ratio: 3 / 2; min-block-size: 8rem; border-radius: .35rem; }
 .shelf-spread__visuals .flow { flex-direction: column; flex-wrap: nowrap; }
 .shelf-spread__visuals .flow__step { flex: auto; flex-direction: row; font-size: .85rem; }

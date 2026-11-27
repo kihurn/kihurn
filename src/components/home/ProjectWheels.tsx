@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useScrambleText } from "@/hooks/useScrambleText";
+import { isMouseWheel } from "@/lib/scrollInput";
 import { wrapIndex, wheelStepDirection } from "@/lib/wheelMath";
 import { PressWheelCanvas, type WheelSimState } from "./PressWheelCanvas";
 
@@ -214,11 +215,14 @@ export function ProjectWheels({ items }: { items: WheelItem[] }) {
     const hide = () => setHint(false);
 
     const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return;
       beginOrbit();
       const sideways = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
       if (!sideways) return;
       e.preventDefault();
-      s.target += (e.deltaX || e.deltaY) / (rowPx() * 2.4);
+      const delta = e.deltaX || e.deltaY;
+      if (isMouseWheel(e, delta)) s.target = Math.round(s.target) + Math.sign(delta);
+      else s.target += delta / (rowPx() * 2.4);
       hide();
       clearTimeout(snapTimer);
       snapTimer = window.setTimeout(snap, 140);

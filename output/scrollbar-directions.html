@@ -1,0 +1,77 @@
+<div id="scrollbar-directions">
+  <div class="samples">
+    <section class="sample" aria-labelledby="native-label">
+      <h2 id="native-label">1 · Minimal native</h2>
+      <div class="page native" aria-hidden="true">
+        <div class="chrome"><span>Lab ::</span><span>LIST</span></div>
+        <div class="viewport">
+          <div class="content">
+            <p class="folio">PROJECT INDEX</p>
+            <p class="title">Lab</p>
+            <div class="row"><span>01</span> Elysium <span>↗</span></div>
+            <div class="row"><span>02</span> SecureFin <span>↗</span></div>
+            <div class="row"><span>03</span> Kinetic Halftone Matrix <span>↗</span></div>
+            <div class="row"><span>04</span> Tactile Rotary Detent <span>↗</span></div>
+            <div class="row"><span>05</span> Deformable Paper Poster <span>↗</span></div>
+            <div class="row"><span>06</span> IbuNiaga Portal <span>↗</span></div>
+          </div>
+          <div class="track"><span></span></div>
+        </div>
+      </div>
+    </section>
+    <section class="sample" aria-labelledby="rail-label">
+      <h2 id="rail-label">2 · Print-shop rail</h2>
+      <div class="page rail" aria-hidden="true">
+        <div class="chrome"><span>Lab ::</span><span>LIST</span></div>
+        <div class="viewport">
+          <div class="content">
+            <p class="folio">PROJECT INDEX</p>
+            <p class="title">Lab</p>
+            <div class="row"><span>01</span> Elysium <span>↗</span></div>
+            <div class="row"><span>02</span> SecureFin <span>↗</span></div>
+            <div class="row"><span>03</span> Kinetic Halftone Matrix <span>↗</span></div>
+            <div class="row"><span>04</span> Tactile Rotary Detent <span>↗</span></div>
+            <div class="row"><span>05</span> Deformable Paper Poster <span>↗</span></div>
+            <div class="row"><span>06</span> IbuNiaga Portal <span>↗</span></div>
+          </div>
+          <div class="track"><span></span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <button class="compare cursor-interaction" type="button">Simulate one wheel notch</button>
+</div>
+<style>
+  #scrollbar-directions { font-family: system-ui, sans-serif; }
+  #scrollbar-directions .samples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  #scrollbar-directions h2 { margin: 0 0 8px; }
+  #scrollbar-directions .page { --paper: #1e1e1e; --ink: #d6d6d5; --rule: #3a3a3a; background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+  #scrollbar-directions .chrome { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--rule); font: 12px ui-monospace, monospace; }
+  #scrollbar-directions .viewport { position: relative; height: 220px; overflow: hidden; background: radial-gradient(circle, #363636 0.6px, transparent 0.9px) 0 0 / 5px 5px; }
+  #scrollbar-directions .content { padding: 12px 30px 16px 16px; transform: translateY(calc(-36px * var(--step, 0))); }
+  #scrollbar-directions .folio { font: 11px ui-monospace, monospace; color: #a9a9a8; }
+  #scrollbar-directions .title { font-size: 28px; margin: 1px 0 10px; }
+  #scrollbar-directions .row { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center; gap: 5px; min-height: 38px; padding: 4px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+  #scrollbar-directions .row span { color: #a9a9a8; font: 11px ui-monospace, monospace; }
+  #scrollbar-directions .track { position: absolute; right: 9px; top: 10px; bottom: 10px; width: 8px; }
+  #scrollbar-directions .track span { position: absolute; top: 9px; left: 50%; transform: translate(-50%, calc(23px * var(--step, 0))); height: 57px; width: 7px; background: #7f7f7e; border-radius: 9px; }
+  #scrollbar-directions .rail .track::before { content: ''; position: absolute; inset: 0 auto 0 50%; width: 1px; background: #565656; }
+  #scrollbar-directions .rail .track span { width: 4px; border-radius: 1px; background: #b2b2b0; }
+  #scrollbar-directions .rail .track:hover span { background: #eaeae7; }
+  #scrollbar-directions .rail :is(.content, .track span) { transition: transform 230ms cubic-bezier(.22, .72, .28, 1); }
+  #scrollbar-directions .compare { margin-top: 12px; padding: 8px 12px; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: inherit; font: inherit; }
+  @media (max-width: 520px) { #scrollbar-directions .samples { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { #scrollbar-directions .rail :is(.content, .track span) { transition: none; } }
+</style>
+<script>
+  (() => {
+    const mockup = document.getElementById('scrollbar-directions');
+    const button = mockup.querySelector('.compare');
+    let step = 0;
+    button.addEventListener('click', () => {
+      step = (step + 1) % 4;
+      mockup.style.setProperty('--step', step);
+      button.textContent = step === 3 ? 'Return to top' : 'Simulate one wheel notch';
+    });
+  })();
+</script>

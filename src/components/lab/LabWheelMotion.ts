@@ -1,4 +1,5 @@
 import { wrapHalfOffset, wrapIndex } from "@/lib/wheelMath";
+import { isMouseWheel } from "@/lib/scrollInput";
 
 export function bindLabWheel(shelf: HTMLElement, track: HTMLDivElement, initial: number, select: (slug: string) => void) {
   const rows = Array.from(track.querySelectorAll<HTMLElement>("[data-spine]"));
@@ -78,12 +79,11 @@ export function bindLabWheel(shelf: HTMLElement, track: HTMLDivElement, initial:
     if (drag || frozen) return;
     window.clearTimeout(settle);
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    const pixels = delta * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stepSize : 1);
-    if (reduced.matches) {
-      move(Math.round(target) + Math.sign(pixels));
+    if (reduced.matches || isMouseWheel(event, delta)) {
+      move(Math.round(target) + Math.sign(delta));
       return;
     }
-    move(target + Math.max(-3, Math.min(3, pixels / stepSize)));
+    move(target + Math.max(-3, Math.min(3, delta / stepSize)));
     settle = window.setTimeout(() => move(Math.round(target)), 105);
   }
 

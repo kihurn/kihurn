@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { experiments } from "../../src/content/experiments";
 import { projects } from "../../src/content/projects";
 
+test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
+
 test("one filter applies across the available shelf views", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("[data-spine]")).toHaveCount(projects.length + experiments.length);
@@ -267,6 +269,72 @@ test("the internal book omits external source links", async ({ page }) => {
   await expect(book).toContainText("INTERNAL");
   await expect(book.getByRole("link", { name: "GitHub" })).toHaveCount(0);
   await expect(book).toContainText(/walkthrough on request/i);
+});
+
+test("the open book places desktop scrollbars in the spine and keeps mobile stacked", async ({ page, isMobile }) => {
+  if (!isMobile) await page.setViewportSize({ width: 1280, height: 620 });
+  await page.goto("/lab?autostart=1#securefin");
+  const book = page.locator("dialog[open]");
+  await expect(book.getByRole("heading", { name: "SecureFin", exact: true })).toBeVisible();
+  const visuals = book.locator(".shelf-spread__visuals");
+  const details = book.locator(".shelf-spread__details");
+  await expect(details.getByRole("heading", { name: "SecureFin", exact: true })).toHaveCSS("direction", "ltr");
+  if (isMobile) {
+    await expect(details).toHaveCSS("direction", "ltr");
+    await expect(details).toHaveCSS("overflow-y", "visible");
+    await expect(book).toHaveCSS("overflow-y", "auto");
+  } else {
+    await expect(visuals).toHaveCSS("direction", "ltr");
+    await expect(details).toHaveCSS("direction", "rtl");
+    const [left, right] = await book.locator(".shelf-spread__page").evaluateAll((nodes) => nodes.map((node) => ({
+      leftInset: node.clientLeft,
+      rightInset: (node as HTMLElement).offsetWidth - node.clientWidth - node.clientLeft,
+      height: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+      scrollbarWidth: getComputedStyle(node, "::-webkit-scrollbar").width,
+    })));
+    expect(left.rightInset, JSON.stringify(left)).toBeGreaterThan(left.leftInset);
+    expect(right.leftInset, JSON.stringify(right)).toBeGreaterThan(right.rightInset);
+    await details.hover();
+    await page.mouse.wheel(0, 100);
+    await expect.poll(() => details.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+    expect(await visuals.evaluate((node) => node.scrollTop)).toBe(0);
+    await visuals.hover();
+    await page.mouse.wheel(0, 100);
+    await expect.poll(() => visuals.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  }
+});
+
+test("page wheel glide respects reduced motion and leaves fine deltas native", async ({ page, isMobile }) => {
+  await page.goto("/lab?autostart=1");
+  if (!isMobile) {
+    const spine = page.locator(".shelf-spine");
+    await spine.hover();
+    await page.mouse.wheel(0, 100);
+    await expect(spine).toHaveAccessibleName(`Open spine: ${experiments[1].title}`);
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+  }
+  await page.getByRole("button", { name: /^list$/i }).click();
+  const list = page.locator(".shelf__list");
+  const dispatchWheel = (deltaY: number, deltaMode = 0) => list.evaluate((node, delta) => node.dispatchEvent(new WheelEvent("wheel", {
+    ...delta, bubbles: true, cancelable: true,
+  })), { deltaY, deltaMode });
+  expect(await dispatchWheel(11)).toBe(true);
+  expect(await dispatchWheel(6, 1)).toBe(isMobile);
+  if (!isMobile) {
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(96);
+    await list.locator(".shelf-row").nth(2).hover();
+    await list.evaluate((node) => {
+      window.addEventListener("wheel", (event) => {
+        (node as HTMLElement).dataset.wheelHandled = String(event.defaultPrevented);
+      }, { once: true });
+    });
+    await page.mouse.wheel(0, 120);
+    await expect(list).toHaveAttribute("data-wheel-handled", "true");
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(216);
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await dispatchWheel(6, 1)).toBe(true);
 });
 
 test("the Systems inspector opens the selected Lab book", async ({ page }) => {
