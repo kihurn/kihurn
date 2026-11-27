@@ -1,5 +1,3 @@
-import Link from "next/link";
-import type { Project } from "@/content/types";
 import { LabMiniStage } from "./LabMiniStage";
 import { OptionalPhoto } from "@/components/media/OptionalPhoto";
 
@@ -62,35 +60,5 @@ export function ShotSlot({
       </span>
     </div>
     </OptionalPhoto>
-  );
-}
-
-export function ProjectLinks({ p }: { p: Project }) {
-  const internal = p.status === "internal";
-  if (!p.repo && !p.live && !internal && !p.caseStudy) return null;
-
-  return (
-    <ul className="plinks">
-      {p.repo ? (
-        <li>
-          <a href={`https://github.com/${p.repo}`} target="_blank" rel="noopener noreferrer">
-            GitHub: {p.repo}
-          </a>
-        </li>
-      ) : null}
-      {p.live ? (
-        <li>
-          <a href={p.live} target="_blank" rel="noopener noreferrer">
-            {p.live.replace(/^https?:\/\//, "")}
-          </a>
-        </li>
-      ) : null}
-      {internal ? <li className="text-body">Walkthrough on request.</li> : null}
-      {p.caseStudy ? (
-        <li>
-          <Link href={`/lab/${p.slug}`}>Read the case study →</Link>
-        </li>
-      ) : null}
-    </ul>
   );
 }

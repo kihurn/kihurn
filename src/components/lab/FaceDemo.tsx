@@ -58,7 +58,12 @@ export function FaceDemo() {
     }
     setPhase("loading");
     try {
-      stream.current = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false });
+      const camera = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360 }, audio: false });
+      if (!video.current) {
+        camera.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream.current = camera;
     } catch (e) {
       const name = (e as { name?: string })?.name;
       setError(name === "NotAllowedError" ? "Camera permission was denied." : "No camera found.");
@@ -74,9 +79,11 @@ export function FaceDemo() {
         faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
       ]);
       const el = video.current;
-      if (!el || !stream.current) return;
-      el.srcObject = stream.current;
+      const activeStream = stream.current;
+      if (!el || !activeStream) return;
+      el.srcObject = activeStream;
       await el.play();
+      if (stream.current !== activeStream) return;
       setPhase("running");
       timer.current = setInterval(async () => {
         const found = await faceapi

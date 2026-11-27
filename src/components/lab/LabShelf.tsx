@@ -8,9 +8,10 @@ import type { CaseStudy } from "@/content/caseStudies";
 import type { Lens } from "@/content/types";
 import { normalizeLabMode, type LabViewMode } from "@/lib/labSchematics";
 import { projectEmblems } from "@/lib/projectEmblems";
+import { FaceDemo } from "./FaceDemo";
 import { LabMiniStage } from "./LabMiniStage";
 import { bindLabWheel } from "./LabWheelMotion";
-import { ShotSlot } from "./Parts";
+import { Flow, ShotSlot } from "./Parts";
 
 type Category = Lens | "motion";
 type Filter = Category | "all";
@@ -135,6 +136,7 @@ function Spread({ book, index, total, direction, closing, fromWheel, onClose, on
             ) : (
               <ShotSlot internal={Boolean(book.internal)} slug={book.slug} name={book.title} photo={book.photo} />
             )}
+            {book.study && book.study.flow.length > 0 && <Flow steps={book.study.flow} label={`How ${book.title} works`} />}
             {book.stack.length > 0 && <ul className="pentry__stack" aria-label="Technology stack">
               {book.stack.map((tech) => <li className="chip text-meta" key={tech}>{tech}</li>)}
             </ul>}
@@ -142,7 +144,6 @@ function Spread({ book, index, total, direction, closing, fromWheel, onClose, on
               {book.repo && <a href={`https://github.com/${book.repo}`} target="_blank" rel="noopener noreferrer">GitHub <ArrowUpRight size={16} /></a>}
               {book.live && <a href={book.live} target="_blank" rel="noopener noreferrer">Live Service <ArrowUpRight size={16} /></a>}
               {book.stage && <Link href={book.stage}>Open Live Stage <ArrowUpRight size={16} /></Link>}
-              {book.study && <Link href={`/lab/${book.slug}`}>Read case study <ArrowRight size={16} /></Link>}
               {book.internal && <span>Walkthrough on request.</span>}
             </div>
           </section>
@@ -158,17 +159,16 @@ function Spread({ book, index, total, direction, closing, fromWheel, onClose, on
             <h2 id="shelf-open-title">{book.title}</h2>
             <p>{book.summary}</p>
             {book.description && <p>{book.description}</p>}
+            {book.study && <section><h3>Problem</h3><p>{book.study.problem}</p></section>}
             {book.role && <section><h3>My role</h3><p>{book.role}</p></section>}
             {book.team && <section><h3>The team</h3><p>{book.team}</p></section>}
             {(book.study || Boolean(book.dependencies?.length)) && <section>
               <h3>Architecture</h3>
-              {book.study && <>
-                <p>{book.study.problem}</p>
-                {book.study.how.map((note) => <p key={note}>{note}</p>)}
-                <p>{book.study.result}</p>
-              </>}
+              {book.study?.how.map((note) => <p key={note}>{note}</p>)}
               {Boolean(book.dependencies?.length) && <p>Uses {book.dependencies?.join(", ")}.</p>}
             </section>}
+            {book.study && <section><h3>Result</h3><p>{book.study.result}</p></section>}
+            {book.slug === "securefin" && <section><h3>Verification demo</h3><FaceDemo /></section>}
           </section>
         </div>
       </div>
@@ -208,6 +208,10 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
   const activeIndex = visible.indexOf(active);
 
   useEffect(() => {
+    const narrow = window.matchMedia("(width < 768px)");
+    const syncViewport = () => {
+      if (narrow.matches) setMode((current) => current === "grid" ? "list" : current);
+    };
     const syncSlug = (slug: string) => {
       window.clearTimeout(timer.current);
       setPending(null);
@@ -225,14 +229,19 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
       if (location.pathname === "/lab" && location.hash) syncSlug(location.hash.slice(1));
     };
     const frame = requestAnimationFrame(() => {
-      try { setMode(normalizeLabMode(localStorage.getItem("lab-mode"))); } catch {}
+      try {
+        const saved = normalizeLabMode(localStorage.getItem("lab-mode"));
+        setMode(narrow.matches && saved === "grid" ? "list" : saved);
+      } catch {}
       sync();
     });
+    narrow.addEventListener("change", syncViewport);
     window.addEventListener("hashchange", sync);
     window.addEventListener("popstate", sync);
     window.addEventListener("kh:navigate", navigate);
     return () => {
       cancelAnimationFrame(frame);
+      narrow.removeEventListener("change", syncViewport);
       window.removeEventListener("hashchange", sync);
       window.removeEventListener("popstate", sync);
       window.removeEventListener("kh:navigate", navigate);
@@ -346,7 +355,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
         <div ref={modesRef} className="shelf__modes" aria-label="Shelf view" role="group" inert={busy}>
           {mode === "wheel" && <button type="button" className="shelf-action shelf__arrow" aria-label="Previous spine"
             disabled={visible.length < 5 && activeIndex === 0} onClick={() => motion.current?.step(-1)}><ChevronLeft size={16} /></button>}
-          {modes.map((view) => <button key={view} type="button" className="shelf-action" aria-pressed={mode === view}
+          {modes.map((view) => <button key={view} type="button" className="shelf-action" data-view={view} aria-pressed={mode === view}
             onClick={() => switchMode(view)}>{view}</button>)}
           {mode === "wheel" && <button type="button" className="shelf-action shelf__arrow" aria-label="Next spine"
             disabled={visible.length < 5 && activeIndex === visible.length - 1} onClick={() => motion.current?.step(1)}><ChevronRight size={16} /></button>}

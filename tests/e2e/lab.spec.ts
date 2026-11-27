@@ -2,15 +2,20 @@ import { expect, test } from "@playwright/test";
 import { experiments } from "../../src/content/experiments";
 import { projects } from "../../src/content/projects";
 
-test("one filter applies across the spine wheel, grid, and list", async ({ page }) => {
+test("one filter applies across the available shelf views", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("[data-spine]")).toHaveCount(projects.length + experiments.length);
   await page.getByRole("button", { name: "Security", exact: true }).click();
   const count = projects.filter((project) => project.lenses.includes("security")).length;
   await expect(page.locator("[data-spine]")).toHaveCount(count);
   await expect(page.getByRole("button", { name: "Open book: SecureFin" })).toBeVisible();
-  await page.getByRole("button", { name: /^grid$/i }).click();
-  await expect(page.getByRole("button", { name: /^Open book:/ })).toHaveCount(count);
+  const grid = page.getByRole("button", { name: /^grid$/i });
+  if (isMobile) {
+    await expect(grid).toHaveCount(0);
+  } else {
+    await grid.click();
+    await expect(page.getByRole("button", { name: /^Open book:/ })).toHaveCount(count);
+  }
   await page.getByRole("button", { name: /^list$/i }).click();
   await expect(page.locator(".shelf-row")).toHaveCount(count);
   await page.getByRole("button", { name: "Motion", exact: true }).click();
@@ -78,11 +83,11 @@ test("the wheel advances through a single stationary spine and a single live cov
   await expect(page.locator("dialog[open]")).toBeVisible();
 });
 
-test("Grid and List scroll the document and Wheel locks to the viewport", async ({ page }) => {
+test("Grid and List scroll the document and Wheel locks to the viewport", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBe(0);
-  for (const mode of ["grid", "list"]) {
+  for (const mode of isMobile ? ["list"] : ["grid", "list"]) {
     await page.getByRole("button", { name: new RegExp(`^${mode}$`, "i") }).click();
     await page.locator("footer").scrollIntoViewIfNeeded();
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
@@ -91,10 +96,10 @@ test("Grid and List scroll the document and Wheel locks to the viewport", async 
   await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
 });
 
-test("Grid and List open directly into the hinged spread", async ({ page }) => {
+test("Grid and List open directly into the hinged spread", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
-  for (const mode of ["grid", "list"]) {
+  for (const mode of isMobile ? ["list"] : ["grid", "list"]) {
     await page.getByRole("button", { name: new RegExp(`^${mode}$`, "i") }).click();
     const entry = mode === "grid" ? page.getByRole("button", { name: `Open book: ${experiments[0].title}` }) : page.locator(".shelf-row").first();
     await entry.click();
@@ -109,7 +114,7 @@ test("Grid and List open directly into the hinged spread", async ({ page }) => {
 test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1");
   await expect(page.locator("[data-spine][aria-current=true]")).toBeVisible();
-  for (const mode of ["wheel", "grid"]) {
+  for (const mode of isMobile ? ["wheel"] : ["wheel", "grid"]) {
     if (mode === "grid") await page.getByRole("button", { name: /^grid$/i }).click();
     const cover = page.getByRole("button", { name: `Open book: ${experiments[0].title}` });
     const scene = cover.locator(".shelf-cover__scene");
@@ -200,14 +205,15 @@ test("List sorting respects the category filter and open-book navigation", async
 });
 
 test("grid covers use a consistent artwork, title, and footer slot without canvases", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Grid is a desktop view");
   await page.goto("/lab?autostart=1");
   await expect(page.locator("html")).toHaveAttribute("data-hydrated", "true");
-  if (!isMobile) await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: /^grid$/i }).click();
   const grid = page.locator(".shelf__grid");
   await expect(grid.locator("canvas")).toHaveCount(0);
   const columns = await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
-  expect(columns).toBe(isMobile ? 1 : 4);
+  expect(columns).toBe(4);
   const slots = await grid.locator(".shelf-cover").evaluateAll((covers, count) => covers.slice(0, count).map((cover) => {
     const art = cover.querySelector(".shelf-cover__art")!.getBoundingClientRect();
     const title = cover.querySelector(".shelf-cover__title")!.getBoundingClientRect();
@@ -225,14 +231,34 @@ test("grid covers use a consistent artwork, title, and footer slot without canva
   expect(rowGap).toBeGreaterThanOrEqual(24);
 });
 
-test("project book deep links retain case-study details, source, and live links", async ({ page }) => {
+test("a saved Grid view falls back to List on narrow screens", async ({ page, isMobile }) => {
+  await page.addInitScript(() => localStorage.setItem("lab-mode", "grid"));
+  await page.goto("/lab?autostart=1");
+  if (!isMobile) {
+    await expect(page.locator(".shelf")).toHaveAttribute("data-mode", "grid");
+    await page.setViewportSize({ width: 767, height: 800 });
+  }
+  await expect(page.getByRole("button", { name: /^grid$/i })).toHaveCount(0);
+  await expect(page.locator(".shelf")).toHaveAttribute("data-mode", "list");
+  await page.getByRole("button", { name: /^wheel$/i }).click();
+  await expect(page.locator(".shelf")).toHaveAttribute("data-mode", "wheel");
+});
+
+test("the open book contains the full case study, diagrams, and project links", async ({ page, isMobile }) => {
   await page.goto("/lab?autostart=1#elysium");
   const book = page.locator("dialog[open]");
   await expect(book.getByRole("heading", { name: "Elysium" })).toBeVisible();
-  await expect(book.getByRole("heading", { name: "Architecture" })).toBeVisible();
+  for (const name of ["Problem", "My role", "The team", "Architecture", "Result"]) {
+    await expect(book.getByRole("heading", { name, exact: true })).toBeVisible();
+  }
+  await expect(book.getByRole("list", { name: "How Elysium works" }).getByRole("listitem")).toHaveCount(4);
+  await expect(book).toContainText("1,800 registrations");
   await expect(book.getByRole("link", { name: "GitHub" })).toHaveAttribute("href", /github\.com/);
   await expect(book.getByRole("link", { name: "Live Service" })).toHaveAttribute("href", /vercel\.app/);
-  await expect(book.getByRole("link", { name: "Read case study" })).toHaveAttribute("href", "/lab/elysium");
+  await expect(book.getByRole("link", { name: "Read case study" })).toHaveCount(0);
+  const columns = await book.locator(".shelf-spread__pages").evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(" ").length);
+  expect(columns).toBe(isMobile ? 1 : 2);
+  expect((await book.boundingBox())!.width).toBeGreaterThan(isMobile ? 320 : 1056);
 });
 
 test("the internal book omits external source links", async ({ page }) => {
@@ -257,11 +283,24 @@ test("the Systems inspector opens the selected Lab book", async ({ page }) => {
   await expect(page.locator("dialog[open]").getByRole("heading", { name: "Lenz" })).toBeVisible();
 });
 
-test("case-study and fullscreen experiment routes still render", async ({ page }) => {
-  for (const item of [...projects.filter((p) => p.caseStudy), ...experiments]) {
+test("old case-study routes open their books and Live Stages still render", async ({ page }) => {
+  for (const project of projects.filter((p) => p.caseStudy)) {
+    await page.goto(`/lab/${project.slug}`);
+    await expect(page).toHaveURL(new RegExp(`/lab#${project.slug}$`));
+    await expect(page.locator("dialog[open]").getByRole("heading", { name: project.name, exact: true })).toBeVisible();
+  }
+  for (const item of experiments) {
     const response = await page.goto(`/lab/${item.slug}?autostart=1`);
     expect(response?.status(), item.slug).toBe(200);
   }
+});
+
+test("primary navigation shows Gigs without a Studio entry", async ({ page, isMobile }) => {
+  await page.goto("/lab?autostart=1");
+  if (isMobile) await page.getByRole("button", { name: "Menu", exact: true }).click();
+  const nav = page.getByRole("navigation", { name: isMobile ? "Mobile" : "Primary", exact: true });
+  await expect(nav.getByRole("link", { name: "Gigs", exact: true })).toHaveAttribute("href", "/gigs");
+  await expect(nav.getByRole("link", { name: "Studio", exact: true })).toHaveCount(0);
 });
 
 test("the shelf does not load face recognition", async ({ page }) => {

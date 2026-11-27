@@ -77,5 +77,5 @@ export function wheelOrder(ps: Project[]): Project[] {
   return [...ps.filter((p) => p.featured), ...ps.filter((p) => !p.featured)];
 }
 
-export const projectHref = (p: Project) => (p.caseStudy ? `/lab/${p.slug}` : `/lab#${p.slug}`);
+export const projectHref = (p: Project) => `/lab#${p.slug}`;
 export const projectTag = (p: Project) => (p.tags?.[0] ?? p.status).toUpperCase();
