@@ -112,6 +112,7 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
   for (const mode of ["wheel", "grid"]) {
     if (mode === "grid") await page.getByRole("button", { name: /^grid$/i }).click();
     const cover = page.getByRole("button", { name: `Open book: ${experiments[0].title}` });
+    const scene = cover.locator(".shelf-cover__scene");
     const front = cover.locator(".shelf-cover__front");
     const inner = cover.locator(".shelf-cover__page");
     await expect(front).toBeVisible();
@@ -120,13 +121,23 @@ test("Wheel and Grid hinge just the front cover on fine pointers", async ({ page
     if (isMobile) {
       await expect(inner).toBeHidden();
       await expect(front).toHaveCSS("transform", "none");
+      await expect(scene).toHaveCSS("animation-name", "none");
     } else {
       await expect.poll(() => front.evaluate((node) => {
         const transform = getComputedStyle(node).transform;
         return transform === "none" ? 0 : Math.round(new DOMMatrixReadOnly(transform).m13 * 1000);
-      })).toBe(469);
-      await expect(cover).toHaveCSS("perspective", "1200px");
+      })).toBe(mode === "wheel" ? 375 : 469);
+      await expect(scene).toHaveCSS("perspective", "1200px");
       await expect(cover).toHaveCSS("transform", "none");
+      if (mode === "wheel") {
+        await expect(scene).toHaveCSS("animation-name", "shelf-preview-idle");
+        await expect(scene).not.toHaveCSS("transform", "none");
+        await expect.poll(() => cover.evaluate((node) => {
+          const front = node.querySelector(".shelf-cover__front")!.getBoundingClientRect();
+          const text = node.querySelector(".shelf-cover__excerpt")!.getBoundingClientRect();
+          return text.left < front.right && front.right < text.right;
+        })).toBe(true);
+      }
     }
     await cover.click();
     const spread = page.locator("dialog[open]");

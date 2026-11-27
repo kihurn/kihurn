@@ -60,36 +60,38 @@ function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
   return (
     <Face type={onOpen ? "button" : undefined} className="shelf-cover" data-compact={compact || undefined} onClick={onOpen}
       aria-label={onOpen ? `Open book: ${book.title}` : undefined}>
-      {onOpen && <span className="shelf-cover__page" aria-hidden="true">
-        <span className="shelf-cover__peek">
-          <span className="shelf-cover__peek-head text-mono-meta">{`N°${number(index)} // ${peekHeading}`}</span>
-          <span className="shelf-cover__excerpt">
-            {peekStack.length ? peekStack.map((tech) => <span key={tech}>{tech}</span>) : peek}
+      <span className="shelf-cover__scene">
+        {onOpen && <span className="shelf-cover__page" aria-hidden="true">
+          <span className="shelf-cover__peek">
+            <span className="shelf-cover__peek-head text-mono-meta">{`N°${number(index)} // ${peekHeading}`}</span>
+            <span className="shelf-cover__excerpt">
+              {peekStack.length ? peekStack.map((tech) => <span key={tech}>{tech}</span>) : peek}
+            </span>
+            {(book.repo || book.live) && <span className="shelf-cover__sources text-mono-meta">
+              {book.repo && <span>GitHub</span>}{book.live && <span>Live</span>}
+            </span>}
+            <span className="shelf-cover__cue text-mono-meta"><span>Open book</span><ArrowRight size={13} /></span>
           </span>
-          {(book.repo || book.live) && <span className="shelf-cover__sources text-mono-meta">
-            {book.repo && <span>GitHub</span>}{book.live && <span>Live</span>}
-          </span>}
-          <span className="shelf-cover__cue text-mono-meta"><span>Open book</span><ArrowRight size={13} /></span>
-        </span>
-      </span>}
-      <span className="shelf-cover__front">
-        <span className="shelf-cover__binding text-mono-meta"><span>N°{number(index)}</span><span>{book.year}</span></span>
-        <span className="shelf-cover__body">
-          <span className="shelf-cover__imprint text-mono-meta"><span>{book.category}</span><span>{book.status}</span></span>
-          <span className="shelf-cover__art" aria-hidden="true">
-            {book.photo ? <Image src={book.photo} alt="" fill sizes="330px" /> : livePreview ? (
-              <LabMiniStage slug={book.slug} cover />
-            ) : artwork ? (
-              <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
-                <path d={artwork} />
-              </svg>
-            ) : <Emblem strokeWidth={1} />}
-          </span>
-          <span className="shelf-cover__title">{compact && book.slug === "ibuniaga" ? "IbuNiaga Portal" : book.title}</span>
-          {!compact && <span className="shelf-cover__summary">{book.summary}</span>}
-          <span className="shelf-cover__foot">
-            {!compact && <span className="shelf-cover__stack">{book.stack.slice(0, 2).map((tech) => <span key={tech}>{tech}</span>)}</span>}
-            <span className="shelf-cover__cue text-mono-meta">Open book <ArrowRight size={15} /></span>
+        </span>}
+        <span className="shelf-cover__front">
+          <span className="shelf-cover__binding text-mono-meta"><span>N°{number(index)}</span><span>{book.year}</span></span>
+          <span className="shelf-cover__body">
+            <span className="shelf-cover__imprint text-mono-meta"><span>{book.category}</span><span>{book.status}</span></span>
+            <span className="shelf-cover__art" aria-hidden="true">
+              {book.photo ? <Image src={book.photo} alt="" fill sizes="330px" /> : livePreview ? (
+                <LabMiniStage slug={book.slug} cover />
+              ) : artwork ? (
+                <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+                  <path d={artwork} />
+                </svg>
+              ) : <Emblem strokeWidth={1} />}
+            </span>
+            <span className="shelf-cover__title">{compact && book.slug === "ibuniaga" ? "IbuNiaga Portal" : book.title}</span>
+            {!compact && <span className="shelf-cover__summary">{book.summary}</span>}
+            <span className="shelf-cover__foot">
+              {!compact && <span className="shelf-cover__stack">{book.stack.slice(0, 2).map((tech) => <span key={tech}>{tech}</span>)}</span>}
+              <span className="shelf-cover__cue text-mono-meta">Open book <ArrowRight size={15} /></span>
+            </span>
           </span>
         </span>
       </span>
@@ -372,7 +374,17 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
             </div>
             <p className="shelf__touch-hint text-mono-meta">Swipe to browse projects</p>
           </div>
-          <div className="shelf__preview"><Cover book={active} index={books.indexOf(active) + 1} livePreview={!open} onOpen={() => openBook(active)} /></div>
+          <div className="shelf__preview" onPointerMove={(event) => {
+            if (event.pointerType !== "mouse") return;
+            const preview = event.currentTarget;
+            const bounds = preview.getBoundingClientRect();
+            const x = Math.max(-.5, Math.min(.5, (event.clientX - bounds.left) / bounds.width - .5));
+            const y = Math.max(-.5, Math.min(.5, (event.clientY - bounds.top) / bounds.height - .5));
+            preview.style.setProperty("--shelf-preview-x", `${x * 4}deg`);
+            preview.style.setProperty("--shelf-preview-y", `${y * -4}deg`);
+          }}>
+            <Cover book={active} index={books.indexOf(active) + 1} livePreview={!open} onOpen={() => openBook(active)} />
+          </div>
         </div>
       )}
       {mode === "grid" && <div className="shelf__grid">
