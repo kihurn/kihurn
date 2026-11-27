@@ -46,8 +46,7 @@ const emblems = { fullstack: Terminal, ai: CircuitBoard, networking: Network, se
 const experimentEmblems = { "vocal-orb": AudioLines, "polka-field": Grid2X2, "rotary-detent": Disc, "paper-poster": Layers } as const;
 const number = (n: number) => String(n).padStart(2, "0");
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const departDuration = 380;
-const closeDuration = 300;
+const departDuration = 550;
 
 function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
   book: ShelfBook; index: number; onOpen?: () => void; compact?: boolean; livePreview?: boolean;
@@ -81,9 +80,9 @@ function Cover({ book, index, onOpen, compact = false, livePreview = false }: {
   );
 }
 
-function Spread({ book, index, total, direction, closing, onClose, onTurn, canTurn }: {
+function Spread({ book, index, total, direction, closing, fromWheel, onClose, onTurn, canTurn }: {
   book: ShelfBook; index: number; total: number; direction: number; onClose: () => void;
-  onTurn: (step: number) => void; canTurn: boolean; closing: boolean;
+  onTurn: (step: number) => void; canTurn: boolean; closing: boolean; fromWheel: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useLayoutEffect(() => {
@@ -98,7 +97,7 @@ function Spread({ book, index, total, direction, closing, onClose, onTurn, canTu
   }, []);
 
   return (
-    <dialog ref={dialog} className="shelf-spread" aria-labelledby="shelf-open-title" data-closing={closing || undefined} data-lenis-prevent
+    <dialog ref={dialog} className="shelf-spread" aria-labelledby="shelf-open-title" data-from-wheel={fromWheel || undefined} data-closing={closing || undefined} data-lenis-prevent
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="shelf-spread__bound">
@@ -300,7 +299,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
       return;
     }
     setClosing(true);
-    timer.current = window.setTimeout(finishClose, closeDuration);
+    timer.current = window.setTimeout(finishClose, mode === "wheel" ? 500 : 300);
   }
 
   function turnBook(step: number) {
@@ -374,7 +373,7 @@ export function LabShelf({ books }: { books: ShelfBook[] }) {
         </ol>
       )}
       {opened && <Spread book={opened} index={books.indexOf(opened) + 1} total={books.length}
-        direction={direction} closing={closing} onClose={closeBook} onTurn={turnBook} canTurn={visible.length > 1} />}
+        direction={direction} closing={closing} fromWheel={mode === "wheel"} onClose={closeBook} onTurn={turnBook} canTurn={visible.length > 1} />}
     </div>
   );
 }
